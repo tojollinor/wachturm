@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wachturm",
+        "description": "Verbinde Home-Assistant-Geräte und Entitäten mit Wachturm. Bedienrechte und PIN-Schutz werden in der Verwaltung festgelegt.",
+        "data": {
+          "name": "Name der Wachturm-Instanz"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Wachturm wurde bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Wachturm konfigurieren",
+        "description": "Konfiguration für Bereiche, Modi, Sensoren, Aktionen, Benutzer und Bediengeräte. PINs werden über die Benutzerverwaltung eingerichtet und nur auf dem Server geprüft.",
+        "data": {
+          "configuration_json": "Konfiguration (JSON)"
+        }
+      }
+    },
+    "error": {
+      "invalid_configuration": "Ungültige Bereichs- oder Zonenkonfiguration. Bitte JSON und Feldwerte prüfen."
+    }
+  }
+}

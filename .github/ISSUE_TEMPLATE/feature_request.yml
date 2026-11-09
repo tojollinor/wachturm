@@ -1,0 +1,16 @@
+name: Verbesserung vorschlagen
+description: Einen Anwendungsfall und die gewünschte Verbesserung beschreiben
+title: '[Idee] '
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Was möchtest du erreichen?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Wie soll es funktionieren?
+    validations:
+      required: true

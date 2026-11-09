@@ -1,0 +1,28 @@
+name: Fehler melden
+description: Ein Problem nachvollziehbar beschreiben
+title: '[Fehler] '
+body:
+  - type: input
+    id: versions
+    attributes:
+      label: Versionen
+      description: Home Assistant und Wachturm
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Erwartetes und tatsächliches Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zur Reproduktion
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Anonymisierte Protokolle oder Bilder
+      description: Keine PINs, Zugangsdaten oder Konfigurationsexporte anhängen.

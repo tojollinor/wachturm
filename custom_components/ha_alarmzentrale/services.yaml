@@ -1,0 +1,36 @@
+arm_area:
+  name: Alarmbereich scharfschalten
+  description: Requires a mapped and authorized Home Assistant user; supports custom mode names.
+  fields:
+    area_key:
+      name: Bereichsschlüssel
+      required: true
+      selector: {text: {}}
+    mode:
+      name: Scharfschaltmodus
+      required: true
+      selector: {text: {}}
+disarm_area:
+  name: Alarmbereich unscharf schalten
+  description: Requires a mapped and authorized Home Assistant user.
+  fields:
+    area_key:
+      name: Bereichsschlüssel
+      required: true
+      selector: {text: {}}
+mute_actions:
+  name: Alarmaktionen stummschalten
+  description: Requires a mapped and authorized HA user; alarm latch stays active.
+  fields:
+    area_key:
+      name: Bereichsschlüssel
+      required: true
+      selector: {text: {}}
+acknowledge_alarm:
+  name: Alarm quittieren
+  description: Requires a mapped and authorized HA user; does not necessarily disarm the area.
+  fields:
+    area_key:
+      name: Bereichsschlüssel
+      required: true
+      selector: {text: {}}
