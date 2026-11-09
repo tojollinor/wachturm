@@ -68,7 +68,8 @@ def runtime_view(runtime, user_id, *, administrator=False):
                       "zones": {key: dict(value, name=next(z.name for z in area.spec.zones if z.key == key))
                                 for key, value in area.zone_summary().items()},
                       "alarm_sources": sorted(area.alarm_sources),
-                      "events": [{"at": e.when, "kind": e.kind, "info": readable_info(area, e.info), "event_id": e.event_id} for e in area.history[-12:]],
+                      "action_results": dict(area.action_results),
+                      "events": [{"at": e.when, "kind": e.kind, "info": readable_info(area, e.info), "event_id": e.event_id} for e in area.history[-(250 if administrator else 12):]],
                       "modes": [{"key": m.key, "name": m.name, "icon": next((v.get("icon") for v in getattr(runtime,"configuration",{}).get("modes",[]) if v["key"]==m.key), None)} for m in area.spec.modes]})
     mode_access = {}
     mode_issues = {}

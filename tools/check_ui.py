@@ -246,6 +246,35 @@ def run():
         page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
         custom = json.loads(backend.raw)
         assert all(any(a['name']=='Eigenes Skript' and a['domain']=='script' and a['service']=='turn_on' and a['entity_ids']==['script.alarm'] for a in area['actions']) for area in custom['areas'])
+        row=root.locator('.action-card').filter(has_text='Eigenes Skript')
+        toggle=row.locator('[data-action-toggle]')
+        assert 'Noch nicht ausgeführt' in row.inner_text()
+        toggle.uncheck()
+        page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._busy")
+        assert all(next(a for a in area['actions'] if a['name']=='Eigenes Skript')['enabled'] is False for area in json.loads(backend.raw)['areas'])
+        toggle.check()
+        page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._busy")
+        home=backend.runtime.engine.areas['home']
+        key=next(a.key for a in home.spec.actions if a.name=='Eigenes Skript')
+        home.record_action_result(key,success=True,info='start')
+        page.evaluate("document.querySelector('ha-alarmzentrale-panel')._pollRuntime()")
+        assert 'Zuletzt ausgeführt' in row.inner_text()
+        root.locator('[data-action="add"]').click()
+        root.locator('[data-field="name"]').fill('Licht nach Aktivierung')
+        root.locator('[data-field="action-when"]').select_option('armed')
+        root.locator('[data-field="action-timing"]').select_option('after')
+        assert root.locator('#action-repeat-option').is_hidden()
+        root.locator('[data-field="timed"]').check()
+        assert root.locator('[data-field="action-stop-clock"]').input_value()=='own'
+        assert root.locator('#action-own-duration').is_visible()
+        root.locator('[data-duration="action-duration"] [data-duration-sec]').fill('20')
+        root.locator('#action-targets summary').click()
+        root.locator('[data-field="manual-target"]').fill('light.test')
+        root.locator('[data-dialog-action="add-manual-target"]').click()
+        root.get_by_role('button',name='Speichern',exact=True).click()
+        page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
+        saved_output=next(a for a in json.loads(backend.raw)['areas'][0]['actions'] if a['name']=='Licht nach Aktivierung')
+        assert saved_output['timed'] and saved_output['duration_seconds']==20
         # Save a notification through the friendly action editor.
         root.get_by_role("button", name="Aktionen", exact=True).click()
         root.locator('[data-action="add"]').click()
@@ -255,6 +284,11 @@ def run():
         root.locator('[data-ha-service="notify.mobile_app_telefon"]').click()
         when = root.locator('[data-field="action-when"]')
         timing = root.locator('[data-field="action-timing"]')
+        for operation in ['mute','acknowledge']:
+            when.select_option(operation)
+            assert timing.input_value()=='after'
+            assert root.locator('#action-repeat-option').is_hidden()
+            assert root.locator('#action-stop-option').is_hidden()
         when.select_option("armed")
         for value in ["before", "during", "after"]:
             timing.select_option(value)
@@ -360,6 +394,12 @@ def run():
         switch.uncheck()
         page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._busy")
         assert json.loads(backend.raw)["sensors"][0]["sabotage"]["enabled"] is False
+        root.locator('[data-area-key="system_sabotage"] [data-action="edit"]').click()
+        assert root.get_by_text('Zugeordnete Sensoren',exact=True).count()==0
+        assert root.locator('[data-field^="area-sabotage-"]').count()==0
+        root.get_by_role('button',name='Speichern',exact=True).click()
+        page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
+        assert json.loads(backend.raw)['sensors'][0]['sabotage']['enabled'] is False
         root.get_by_role("button", name="Bereiche", exact=True).click()
         root.locator('[data-area-key="home"]').evaluate('(el)=>el.open=true')
         root.locator('[data-area-key="home"] [data-action="sensor-edit"]').first.click()

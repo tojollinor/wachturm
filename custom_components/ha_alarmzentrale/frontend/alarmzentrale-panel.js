@@ -1,4 +1,4 @@
-/** Wachturm 0.8.5: local admin panel; no outside JS dependencies.
+/** Wachturm 0.8.6: local admin panel; no outside JS dependencies.
  * All values originating from HA/configuration are HTML escaped before render.
  * Only administrators may call the server's mutation WebSocket endpoints.
  */
@@ -155,6 +155,7 @@ class HaAlarmzentralePanel extends HTMLElement {
       const apply=this.shadowRoot.querySelector('[data-action="diag-apply"]');if(apply)apply.disabled=!this._safe;
       if(this._active==='diagnostics'&&!this._dialog){this._refreshDiagnosticReadouts();const target=this.shadowRoot.getElementById('sensor-test-results');if(target){const temp=document.createElement('div');temp.innerHTML=this._testControls();target.innerHTML=temp.querySelector('#sensor-test-results')?.innerHTML||'';}}
       if(this._active==='audit'&&!this._dialog){const target=this.shadowRoot.getElementById('history-event-list');if(target){const buffer=document.createElement('div');buffer.innerHTML=this._sectionAudit();const updated=buffer.querySelector('#history-event-list');if(updated){const opened=new Set([...target.querySelectorAll('[data-event-group][open]')].map(el=>el.dataset.eventGroup));target.innerHTML=updated.innerHTML;target.querySelectorAll('[data-event-group]').forEach(el=>{el.open=opened.has(el.dataset.eventGroup);});}}}
+      if(this._active==='actions'&&!this._dialog)this.shadowRoot.querySelectorAll('[data-action-last-run]').forEach(el=>{el.innerHTML=this._actionLastRun(el.dataset.actionLastRun);});
       this._updateCountdowns();
       this._runtimeError='';
     }catch(error){
@@ -369,7 +370,7 @@ class HaAlarmzentralePanel extends HTMLElement {
     const dirty = "Änderungen werden im jeweiligen Dialog gespeichert";
     const locked = !this._safe;
     this.shadowRoot.innerHTML = this._css() + `<div class="wrap">
-      <header class="top"><div><div class="row flex-start"><button class="btn mobile-menu" aria-label="Seitenleiste öffnen"><ha-icon icon="mdi:menu"></ha-icon></button><img class="header-mode brand-logo" src="/ha_alarmzentrale_assets/wachturm-logo.png?v=0.8.5" alt="" aria-hidden="true" draggable="false"><div><h1>Wachturm</h1><div class="sub">${this._canAdmin?'Bedienung und Verwaltung':'Bedienung'} · <a class="project-link" href="https://github.com/tojollinor/wachturm" target="_blank" rel="noopener noreferrer" aria-label="Wachturm auf GitHub öffnen">v0.8.5 · GitHub</a></div></div></div></div>
+      <header class="top"><div><div class="row flex-start"><button class="btn mobile-menu" aria-label="Seitenleiste öffnen"><ha-icon icon="mdi:menu"></ha-icon></button><img class="header-mode brand-logo" src="/ha_alarmzentrale_assets/wachturm-logo.png?v=0.8.6" alt="" aria-hidden="true" draggable="false"><div><h1>Wachturm</h1><div class="sub">${this._canAdmin?'Bedienung und Verwaltung':'Bedienung'} · <a class="project-link" href="https://github.com/tojollinor/wachturm" target="_blank" rel="noopener noreferrer" aria-label="Wachturm auf GitHub öffnen">v0.8.6 · GitHub</a></div></div></div></div>
       <div class="message-slot" aria-live="polite"><div class="header-message-stack">${this._error?`<div class="notice error" role="alert">${E(this._error)}</div>`:""}
       ${this._notice?`<div id="success-notice" class="notice" role="status"><ha-icon icon="mdi:check-circle-outline"></ha-icon> ${E(this._notice)}</div>`:""}
       ${this._doc&&this._canAdmin?`<div id="configuration-lock" class="notice warning" ${locked?'':'hidden'}><ha-icon icon="mdi:lock-outline"></ha-icon>${this._runtime?.test_session?.active?'Sensortest aktiv: Alarmaktionen und Bedienung sind gesperrt.':'Änderungen gesperrt: Anlage deaktivieren und Alarme quittieren.'}</div>`:""}
@@ -383,7 +384,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
   }
 
   async _mountAlarmCard(){
-    if(!customElements.get('ha-alarmzentrale-card'))await import('./alarmzentrale-card.js?v=0.8.5');
+    if(!customElements.get('ha-alarmzentrale-card'))await import('./alarmzentrale-card.js?v=0.8.6');
     const host=this.shadowRoot.getElementById('fullscreen-alarm');if(!host||host.firstChild)return;
     const entity=Object.keys(this._hass.states||{}).find(id=>this._hass.states[id].attributes?.alarmzentrale_panel===true&&this._hass.states[id].attributes.integration==='ha_alarmzentrale');
     if(!entity){host.textContent='Zentrales Alarm-Panel noch nicht verfügbar.';return;}
@@ -604,6 +605,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     this.shadowRoot.querySelector('[data-save-pin-policy]')?.addEventListener('click',()=>void this._savePINPolicy());
     this.shadowRoot.querySelectorAll('[data-field^="policy-pin-"]').forEach(field=>field.addEventListener('change',()=>{this._pinDraft=Object.fromEntries(['arm','disarm','mute','acknowledge'].map(op=>[op,this._checked('policy-pin-'+op)]));}));
     this._wireDurations();this._wireGraphs();void this._mountSimpleSources();
+    this.shadowRoot.querySelectorAll('[data-action-toggle]').forEach(input=>input.addEventListener('change',()=>this._toggleAction(input)));
     this.shadowRoot.querySelectorAll('[data-sabotage-toggle]').forEach(input=>input.addEventListener('change',()=>this._toggleSabotage(input))); 
     this._wireDialogFocus();
     this._field('role-preset')?.addEventListener('change',()=>{const preset=this._val('role-preset');if(preset==='custom')return;const allowed=preset==='resident'?PERMS.map(([key])=>key):preset==='guest'?['arm','disarm']:['arm'];this._doc.areas.forEach((area,i)=>{for(const [key] of PERMS){const field=this._field(`grant-op-${i}-${key}`);if(field)field.checked=allowed.includes(key);}const all=this._field('grant-allmodes-'+i);if(all)all.checked=true;});const name=this._field('name');if(name&&(!name.value||name.value==='Neue Rolle'))name.value=({resident:'Bewohner',guest:'Gast',service:'Service'})[preset];});
@@ -755,7 +757,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     if(!this._canAdmin||!this._safe)throw Error('Zum Speichern müssen alle Bereiche unscharf und quittiert sein.');
     if(this._busy)throw Error('Ein Speichervorgang läuft bereits.');
     this._stopLearning();this._busy=true;
-    const controls=[...this.shadowRoot.querySelectorAll('.modal input,.modal select,.modal textarea,.modal button,#pin-policy input,#pin-policy button,#add-radio,[data-sabotage-toggle],[data-action="diag-apply"]')].map(el=>[el,el.disabled]);
+    const controls=[...this.shadowRoot.querySelectorAll('.modal input,.modal select,.modal textarea,.modal button,#pin-policy input,#pin-policy button,#add-radio,[data-action-toggle],[data-sabotage-toggle],[data-action="diag-apply"]')].map(el=>[el,el.disabled]);
     controls.forEach(([el])=>{el.disabled=true;});
     try {
       await this._hass.callWS({type:'ha_alarmzentrale/editor/save',revision:this._revision,configuration:candidate});
@@ -1109,6 +1111,16 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
       ${areas.map(area=>{const fixed=area.key===SABOTAGE_AREA,index=this._doc.areas.indexOf(area),sensors=this._doc.sensors.filter(sensor=>fixed?Boolean(sensor.sabotage):(sensor.memberships||[]).some(link=>link.area===area.key));return `<details class="sensor-advanced area-sensor-group" data-area-key="${E(area.key)}" data-detail-key="area-sensors-${E(area.key)}" data-search="${E(area.name+' '+sensors.map(s=>s.name+' '+s.entities?.map(e=>e.entity_id).join(' ')).join(' '))}"><summary><ha-icon icon="${E(this._areaIcon(area))}"></ha-icon><strong>${E(area.name)}</strong><span class="sub">${sensors.length} Sensoren · ${this._modesForArea(area.key).length} Modi</span></summary><div class="area-sensor-toolbar"><button class="btn small" data-action="edit" data-index="${index}" ${!this._safe?'disabled':''}>${fixed?'Bereichseinstellungen':'Bereich bearbeiten'}</button>${fixed?'':`<button class="btn small danger" data-action="delete" data-index="${index}" ${!this._safe?'disabled':''}>Bereich löschen</button><button class="btn primary small" data-action="sensor-add" data-area="${E(area.key)}" ${!this._safe?'disabled':''}>+ Sensor hinzufügen</button>`}</div>${sensors.map(sensor=>this._areaSensorRow(sensor,area.key)).join('')||'<p class="sub">Noch keine Sensoren vorhanden.</p>'}</details>`;}).join('')}
       ${unassigned.length?`<details class="sensor-advanced area-sensor-group" data-detail-key="unassigned-sensors" data-search="${E(unassigned.map(s=>s.name).join(' '))}"><summary><ha-icon icon="mdi:folder-alert-outline"></ha-icon><strong>Ohne Bereich</strong><span class="sub">${unassigned.length} Sensoren</span></summary><p class="sub">Diese vorhandenen Sensoren bleiben erhalten. Über Bearbeiten einem Bereich zuordnen.</p>${unassigned.map(sensor=>this._areaSensorRow(sensor,null)).join('')}</details>`:''}</div>`;
   }
+  _actionLastRun(key) {
+    const results=(this._runtime?.areas_state||[]).map(area=>area.action_results?.[key]).filter(Boolean).sort((a,b)=>b.at-a.at);
+    const last=results[0];return last?`Zuletzt ausgeführt: ${E(this._localTime(last.at))} · <span class="tone-${last.success?'good':'error'}">${last.success?'Erfolgreich':'Fehlgeschlagen'}</span>`:'Noch nicht ausgeführt';
+  }
+  async _toggleAction(input) {
+    const key=input.dataset.actionToggle,enabled=input.checked;if(this._busy||!this._safe||!this._canAdmin){input.checked=!enabled;return;}
+    const candidate=clone(this._doc);for(const area of candidate.areas)for(const action of area.actions||[])if(action.key===key)action.enabled=enabled;
+    try{await this._persistCandidate(candidate,enabled?'Aktion aktiviert.':'Aktion deaktiviert.');}
+    catch(error){input.checked=!enabled;const target=this.shadowRoot.querySelector('[data-action-feedback="'+CSS.escape(key)+'"]');if(target)target.textContent=this._explain(error.message||error);}
+  }
   _sectionV2() {
     const key=this._active, area=this._doc.areas.find(a=>a.key===this._area);
     if(key==='areas'||key==='zones')return this._sectionAreaSensors();
@@ -1128,7 +1140,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
            :`${item.domain}.${item.service} · ${(item.entity_ids||[]).map(x=>this._entityLabel(x)).join(', ')}`;
          const chips=key==='zones'?`<div class="checkbox-wrap">${(item.memberships||[]).map(m=>`<button type="button" class="btn small" data-action="membership" data-area="${E(m.area)}" data-index="${index}" ${!this._safe?'disabled':''}>${E(this._doc.areas.find(a=>a.key===m.area)?.name||m.area)} · Zuordnung</button>`).join('')||(item.sabotage?'':'<span class="sub">Noch keinem Bereich zugeordnet</span>')}</div>`:'';
          if(key==='zones')return `<div class="list-item sensor-card" data-search="${E((item.name||item.key)+' '+desc)}"><div class="sensor-main-row"><div class="sensor-title"><ha-icon icon="${E(this._sensorIcon(item))}"></ha-icon><strong>${E(item.name)}</strong></div><div class="entity-statuses" data-sensor-status="${E(item.key)}">${this._sensorStatusMarkup(item)}</div><div class="actions"><button class="btn small" data-action="edit" data-index="${index}" ${!this._safe?'disabled':''}>Bearbeiten</button><button class="btn small danger" data-action="delete" data-index="${index}" ${!this._safe?'disabled':''}>Löschen</button></div></div><details class="sensor-links" data-detail-key="sensor-${E(item.key)}"><summary>Bereiche und Modi</summary>${chips}${this._sensorModeSummary(item)}</details></div>`;
-         return `<div class="list-item ${key==='zones'?'sensor-card':key==='actions'?'action-card':''}" data-search="${E((item.name||item.key)+' '+desc)}"><div><div class="${key==='zones'?'sensor-title':'list-heading'}">${['zones','modes','areas'].includes(key)?`<ha-icon icon="${E(key==='zones'?this._sensorIcon(item):key==='modes'?this._modeIcon(item):this._areaIcon(item))}" aria-hidden="true"></ha-icon>`:''}<span class="name">${E(item.name||item.key)}</span></div><div class="sub list-description">${E(desc)}</div>${key==='zones'?`<div class="entity-statuses" data-sensor-status="${E(item.key)}">${this._sensorStatusMarkup(item)}</div>`:''}${key==='zones'?'':chips}${key==='zones'?`<details class="sensor-links"><summary>Bereiche und Modi</summary>${chips}${this._sensorModeSummary(item)}</details>`:''}</div><div class="actions"><button class="btn small" data-action="edit" data-index="${index}" ${!this._safe?'disabled':''}>Bearbeiten</button><button class="btn small danger" data-action="delete" data-index="${index}" ${!this._safe||(key==='areas'&&item.key===SABOTAGE_AREA)?'disabled':''}>Löschen</button></div></div>`;
+         return `<div class="list-item ${key==='zones'?'sensor-card':key==='actions'?'action-card':''}" data-search="${E((item.name||item.key)+' '+desc)}"><div><div class="${key==='zones'?'sensor-title':'list-heading'}">${['zones','modes','areas'].includes(key)?`<ha-icon icon="${E(key==='zones'?this._sensorIcon(item):key==='modes'?this._modeIcon(item):this._areaIcon(item))}" aria-hidden="true"></ha-icon>`:''}<span class="name">${E(item.name||item.key)}</span></div><div class="sub list-description">${E(desc)}</div>${key==='actions'?`<div class="sub" data-action-last-run="${E(item.key)}">${this._actionLastRun(item.key)}</div><span class="sub tone-error" data-action-feedback="${E(item.key)}" role="status"></span>`:''}${key==='zones'?`<div class="entity-statuses" data-sensor-status="${E(item.key)}">${this._sensorStatusMarkup(item)}</div>`:''}${key==='zones'?'':chips}${key==='zones'?`<details class="sensor-links"><summary>Bereiche und Modi</summary>${chips}${this._sensorModeSummary(item)}</details>`:''}</div><div class="actions">${key==='actions'?`<label class="check toggle"><input type="checkbox" role="switch" data-action-toggle="${E(item.key)}" aria-label="Aktion ${E(item.name)} aktiviert" ${item.enabled!==false?'checked':''} ${!this._safe?'disabled':''}><span class="toggle-track" aria-hidden="true"></span>Aktiv</label>`:''}<button class="btn small" data-action="edit" data-index="${index}" ${!this._safe?'disabled':''}>Bearbeiten</button><button class="btn small danger" data-action="delete" data-index="${index}" ${!this._safe||(key==='areas'&&item.key===SABOTAGE_AREA)?'disabled':''}>Löschen</button></div></div>`;
        }).join(''):'<p class="muted">Noch keine Einträge vorhanden.</p>'}</div>`;
   }
 
@@ -1256,18 +1268,11 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     const sensors=this._doc.sensors.filter(s=>fixed?Boolean(s.sabotage):(s.memberships||[]).some(m=>m.area===item.key));
     return this._v2Modal(fixed?'Sabotagebereich':'Alarmbereich bearbeiten',`
       ${this._v2KeyField(d)}${fixed?'<h3>Sabotage</h3><p class="sub">Sabotagekontakte werden automatisch aus den Sensoren übernommen.</p>':this._input('name','Bereichsname',item.name)}<div data-native-icon="icon" data-source-label="Bereichssymbol">${this._input('icon','Bereichssymbol',this._areaIcon(item))}</div>
-      <h3>Zugeordnete Sensoren</h3>
-      ${sensors.map(sensor=>{
-        const index=this._doc.sensors.indexOf(sensor),link=sensor.memberships?.find(m=>m.area===item.key);
-        if(fixed)return `<div class="list-item sabotage-sensor-row"><div class="sabotage-sensor-content"><div class="item-title"><ha-icon icon="mdi:shield-check"></ha-icon><strong>${E(sensor.name)}</strong></div><div class="entity-statuses" data-sensor-status="${E(sensor.key)}">${this._sensorStatusMarkup(sensor)}</div></div>${this._switch('area-sabotage-'+index,'Überwachen',sensor.sabotage.enabled!==false)}</div>`;
-        return `<div class="list-item"><div class="item-title"><ha-icon icon="${E(this._sensorIcon(sensor))}"></ha-icon><strong>${E(sensor.name)}</strong></div><div class="entity-statuses" data-sensor-status="${E(sensor.key)}">${this._sensorStatusMarkup(sensor)}</div></div>`;
-      }).join('')||'<div class="empty-state">Sensoren nach dem Speichern direkt im Bereich hinzufügen.</div>'}
       <details class="sensor-advanced"><summary>Weitere Einstellungen</summary><div class="form-grid area-advanced-settings">${this._select('ack_policy','Alarm quittieren',item.ack_policy||'manual',[['manual','Manuell'],['auto_clear','Nach Normalisierung automatisch']])}${this._input('recovery_fault_grace_seconds','Schutzzeit nach Neustart (s)',item.recovery_fault_grace_seconds??30,'number')}</div></details>
       <p class="sub">Neue Bereiche benötigen zusätzlich die passenden Benutzer- oder Rollenrechte.</p><p class="sub">Welche Bereiche aktiv sind und ob Kontakte sofort oder nach Standby auslösen, wird im jeweiligen Modus eingestellt.</p>`);
   }
-  _applyAreaMembers(candidate,area) {
-    if(area.key===SABOTAGE_AREA){candidate.sensors.forEach((sensor,index)=>{if(sensor.sabotage)sensor.sabotage.enabled=this._checked('area-sabotage-'+index);});return;}
-    // Regular sensors are created or moved in their own area-scoped dialog.
+  _applyAreaMembers() {
+    // Sensor membership and sabotage are managed exclusively in the area list.
   }
   _v2ModeDialog() {
     const d=this._dialog,item=d.item;
@@ -1453,8 +1458,8 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     if(domain==='notify'&&!notify.some(([key])=>key===item.service))notify.push([item.service||'notify',item.service||'notify']);
     return this._v2Modal('Aktion bearbeiten',`${this._v2KeyField(d)}${this._input('name','Aktionsname',item.name)}${this._group('Gilt für Modi',this._doc.modes.map(m=>this._switch('action-mode-'+m.key,m.name,item.mode_keys==null||item.mode_keys.includes(m.key))).join(''))}
       ${this._actionServicePicker(item)}<input type="hidden" data-field="action-kind" value="${E(kind)}">
-      <div class="form-grid">
-      ${this._select('action-when','Ereignis',item.when||'alarm',[['alarm','Alarm'],['armed','Scharfschalten'],['disarmed','Unscharfschalten'],['battery','Batteriewarnung'],['offline','Verbindungsverlust'],['unstable','Instabile Verbindung']])}${this._select('action-timing','Zeitpunkt',item.timing||(['armed','disarmed'].includes(item.when)?'after':'during'),[['before','Vor'],['during','Während'],['after','Nach']])}</div><p class="sub" id="action-timing-hint"></p>
+      ${this._switch('enabled','Aktion aktiviert',item.enabled!==false)}<div class="form-grid">
+      ${this._select('action-when','Ereignis',item.when||'alarm',[['alarm','Alarm'],['armed','Scharfschalten'],['disarmed','Unscharfschalten'],['acknowledge','Quittieren'],['mute','Stummschalten'],['battery','Batteriewarnung'],['offline','Verbindungsverlust'],['unstable','Instabile Verbindung']])}${this._select('action-timing','Zeitpunkt',item.timing||(['armed','disarmed','mute','acknowledge'].includes(item.when)?'after':'during'),[['before','Vor'],['during','Während'],['after','Nach']])}</div><p class="sub" id="action-timing-hint"></p>
       <div id="action-notification" ${kind==='notify'?'':'hidden'}>${this._select('notify-service','Empfänger / Benachrichtigungsdienst',item.service||'',notify)}${this._input('notify-title','Titel (optional)',item.data?.title||'')}${this._input('notify-message','Nachricht',item.data?.message||'')}<div class="actions token-buttons" style="margin-top:10px">${[['alarm_message','Alarmmeldung'],['sensor','Sensor'],['area','Bereich'],['mode','Modus'],['time','Zeitpunkt']].map(([key,label])=>`<button class="btn small" type="button" data-insert-token="${key}">+ ${label}</button>`).join('')}</div><div class="notification-options">${this._select('notification-platform','Benachrichtigungsprofil',item.notification?.platform||'standard',[['standard','Standard'],['ios','iOS Alarmmeldung'],['android','Android Alarmmeldung']])}${this._switch('notification-critical','Kritischer Alarmton',item.notification?.critical??true)}${this._switch('notification-persistent','Dauerhaft anzeigen (Android)',item.notification?.persistent??true)}${this._switch('notification-buttons','Aktionsbuttons mit Bestätigung',item.notification?.buttons??true)}${this._switch('notification-tts','Android-TTS zusätzlich sprechen',item.notification?.tts??false)}<div id="tts-text-editor"><label class="field">TTS-Ansagetext<textarea data-field="notification-tts-text" rows="3" maxlength="10000" placeholder="Leer = Benachrichtigungstext">${E(item.notification?.tts_text||'')}</textarea></label><div class="actions token-buttons">${[['alarm_message','Alarmmeldung'],['sensor','Sensor'],['area','Bereich'],['mode','Modus'],['time','Zeitpunkt']].map(([key,label])=>`<button class="btn small" type="button" data-insert-token="${key}" data-token-target="notification-tts-text">+ ${label}</button>`).join('')}</div></div>${this._switch('notification-tts-max','TTS vorübergehend mit maximaler Alarmlautstärke',item.notification?.tts_max??false)}${this._duration('notification-tts-repeat','TTS-Wiederholungsabstand (0 = einmalig)',item.notification?.tts_repeat_seconds||0)}${this._switch('notification-alarm-stream','Android-Alarmton wie im getesteten Skript',item.notification?.alarm_stream??false)}${this._switch('notification-screen-on','Bildschirm bei Alarm einschalten',item.notification?.screen_on??false)}${this._switch('notification-open-alarm','Vollbild-Alarmansicht automatisch öffnen',item.notification?.open_alarm??false)}<details class="sensor-advanced"><summary>Smartphone für kritische Alarme einrichten</summary><p><strong>Android:</strong> Bei aktiviertem Alarmton wie im Test wird der Kanal alarm_stream verwendet. Sonst nach der ersten kritischen Testmeldung den Kanal „Alarmzentrale Alarm“ unter Home Assistant → Benachrichtigungen öffnen. Hohe Wichtigkeit, Ton und „Nicht stören ignorieren“ erlauben. Auch die Ausnahmen im verwendeten Schlaf-/Arbeitsmodus prüfen. Auf Samsung gegebenenfalls zuerst Benachrichtigungskategorien für Apps aktivieren. Die Alarm-Lautstärke und die TTS-Ausgabe am Gerät prüfen. TTS kann alle 10 Sekunden bis 60 Minuten wiederholt werden; 0 bedeutet einmalig. Wiederholungen enden beim Stummschalten, Deaktivieren, Quittieren oder Ablauf der Alarmaktionsdauer. Bildschirm einschalten und automatisches Öffnen sind geräteabhängig; der Sperrbildschirm wird nicht entsperrt.</p><p><strong>iOS:</strong> Einstellungen → Mitteilungen → Home Assistant → Kritische Hinweise und Töne erlauben. Kritische Alarme kommen getrennt von der leisen, aktualisierbaren Statusmeldung. Auf die Meldung tippen öffnet den Alarm.</p><p class="sub">Eine Freigabe am Smartphone kann nicht aus Home Assistant erzwungen werden. Benachrichtigungen direkt in diesem Aktionsdialog testen.</p></details><p class="sub">Smartphone-Aktionen öffnen Wachturm zur Bestätigung. iOS erlaubt keine garantiert unentfernbare Meldung. Kritischer Ton benötigt passende Smartphone-Berechtigungen.</p></div></div>
 
       <div id="action-targets" ${kind==='notify'?'hidden':''}><h3>Zielgeräte / Entitäten</h3><div id="action-native-picker"></div><div id="action-target-fallback">${this._input('action-target-search','Entitäten suchen','','search')}<div class="entity-picker" id="action-entity-picker">${this._actionChoices()}</div></div>
@@ -1463,7 +1468,8 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
       <details id="action-advanced" class="sensor-advanced" ${kind==='custom'?'open':''}><summary>Erweiterte Home-Assistant-Einstellungen</summary><input type="hidden" data-field="domain" value="${E(domain)}"><input type="hidden" data-field="service" value="${E(item.service||'turn_on')}">
 
       <label class="field">Zusätzliche Daten (JSON)<textarea data-field="data" rows="4">${E(JSON.stringify(item.data||{},null,2))}</textarea></label></details>
-      ${this._checkbox('repeat_on_retrigger','Bei erneutem Alarm wiederholen',item.repeat_on_retrigger)}${this._checkbox('timed','Nach Alarmaktionsdauer automatisch beenden',item.timed)}<p class="sub">Automatisches Beenden gilt nur für unterstützte Alarm-Ausgänge, die Wachturm selbst eingeschaltet hat.</p>`);
+      <div id="action-repeat-option">${this._checkbox('repeat_on_retrigger','Bei erneuter Auslösung innerhalb desselben Alarms wiederholen',item.repeat_on_retrigger)}</div><p id="action-repeat-hint" class="sub">Wird bei jedem neuen Ereignis ausgeführt. Mehrere Meldungen desselben Ereignisses lösen diese Aktion nur einmal aus.</p>
+      <div id="action-stop-option">${this._checkbox('timed','Ausgang automatisch ausschalten',item.timed)}${this._select('action-stop-clock','Dauer verwenden',item.duration_seconds!=null?'own':'alarm',[['alarm','Alarmaktionsdauer des Modus'],['own','Eigene Dauer']])}<div id="action-own-duration">${this._duration('action-duration','Aktionsdauer',item.duration_seconds??30)}</div><p class="sub">Nur Ausgänge, die Wachturm selbst eingeschaltet hat, werden automatisch ausgeschaltet.</p></div>`);
   }
   _actionTestMarkup(){
     const d=this._dialog,item=d.item;
@@ -1475,6 +1481,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     try{
       const action=this._readDialog(),mode=this._val('test-action-mode'),area=this._doc.modes.find(m=>m.key===mode)?.area_keys?.find(k=>this._runtime?.areas_state?.some(a=>a.key===k))||this._doc.modes.find(m=>m.key===mode)?.area_keys?.[0];
       if(!area)throw Error('Für diesen Testmodus ist noch keine Überwachung eingerichtet.');
+      if(action.enabled===false)throw Error('Zum Testen die Aktion im Dialog aktivieren.');
       if(!action.mode_keys.includes(mode))throw Error('Testmodus ist für diese Aktion nicht ausgewählt.');
       const result=await this._hass.callWS({type:'ha_alarmzentrale/runtime/action_test',operation:'start',action,area,mode});
       this._runtime.simulation=result.simulation;this._actionTestFeedback('Test läuft · '+action.name+' → '+action.domain+'.'+action.service+' · Automatisches Ende nach 60 Sekunden.');
@@ -1494,23 +1501,29 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     }catch(e){this._actionTestFeedback(this._explain(e.message||e),true);}finally{this._testingAction=false;}
   }
   _actionTimings(when) {
-    return when==='armed'?['before','during','after']:when==='disarmed'?['after']:when==='alarm'?['before','during','after']:['during','after'];
+    return when==='armed'?['before','during','after']:['disarmed','mute','acknowledge'].includes(when)?['after']:when==='alarm'?['before','during','after']:['during','after'];
   }
   _updateActionControls() {
     const kind=this._val('action-kind'),when=this._val('action-when');let platform=this._val('notification-platform');
     const timingField=this._field('action-timing'),allowed=this._actionTimings(when);
-    if(timingField){for(const option of timingField.options)option.disabled=!allowed.includes(option.value);if(!allowed.includes(timingField.value))timingField.value=['armed','disarmed'].includes(when)?'after':'during';}
-    const timing=timingField?.value||(['armed','disarmed'].includes(when)?'after':'during');
+    if(timingField){for(const option of timingField.options)option.disabled=!allowed.includes(option.value);if(!allowed.includes(timingField.value))timingField.value=['armed','disarmed','mute','acknowledge'].includes(when)?'after':'during';}
+    const timing=timingField?.value||(['armed','disarmed','mute','acknowledge'].includes(when)?'after':'during');
     const profile=this._field('notification-platform');
     if(profile){profile.disabled=when!=='alarm'||timing!=='during';if(profile.disabled){profile.value='standard';platform='standard';}}
     const hint=this.shadowRoot.getElementById('action-timing-hint');
-    if(hint)hint.textContent=when==='armed'?(timing==='before'?'Beim angenommenen Schaltauftrag, nach erfolgreicher Bereitschaftsprüfung. Aktionen laufen asynchron und verzögern das Scharfschalten nicht.':timing==='during'?'Einmal zu Beginn der Ausgangszeit; ohne Ausgangszeit entfällt dieser Zeitpunkt.':'Nach abgeschlossener Ausgangszeit, sobald die Überwachung scharf ist.'):when==='alarm'?(timing==='before'?'Zu Beginn der Eingangszeit; bei sofortigem Alarm gibt es keinen Vorlauf.':timing==='after'?'Nach Quittierung oder Unscharfschalten eines aktiven Alarms.':'Bei Alarmauslösung; Wiederholung gemäß Einstellung.'):when==='disarmed'?'Unscharfschalten erfolgt sofort. Aktionen werden anschließend ausgeführt.':timing==='after'?(when==='battery'?'Sobald die Batterie wieder als normal gemeldet wird.':when==='unstable'?'Sobald die Verbindung über die eingestellte Erholungszeit stabil bleibt.':'Sobald das Gerät wieder erreichbar ist.'):'Einmal beim Erkennen der Störung. Ein Zeitpunkt davor ist nicht vorhersehbar.';
+    if(hint)hint.textContent=when==='armed'?(timing==='before'?'Beim angenommenen Schaltauftrag, nach erfolgreicher Bereitschaftsprüfung. Aktionen laufen asynchron und verzögern das Scharfschalten nicht.':timing==='during'?'Einmal zu Beginn der Ausgangszeit; ohne Ausgangszeit entfällt dieser Zeitpunkt.':'Nach abgeschlossener Ausgangszeit, sobald die Überwachung scharf ist.'):when==='alarm'?(timing==='before'?'Zu Beginn der Eingangszeit; bei sofortigem Alarm gibt es keinen Vorlauf.':timing==='after'?'Nach Quittierung oder Unscharfschalten eines aktiven Alarms.':'Bei Alarmauslösung; Wiederholung gemäß Einstellung.'):['disarmed','mute','acknowledge'].includes(when)?'Diese Bedienhandlung erfolgt sofort. Zugeordnete Aktionen werden anschließend ausgeführt.':timing==='after'?(when==='battery'?'Sobald die Batterie wieder als normal gemeldet wird.':when==='unstable'?'Sobald die Verbindung über die eingestellte Erholungszeit stabil bleibt.':'Sobald das Gerät wieder erreichbar ist.'):'Einmal beim Erkennen der Störung. Ein Zeitpunkt davor ist nicht vorhersehbar.';
     const text=this.shadowRoot.getElementById('tts-text-editor');if(text)text.hidden=platform!=='android'||!this._checked('notification-tts');
     const repeat=this.shadowRoot.querySelector('[data-duration=notification-tts-repeat]');if(repeat)repeat.hidden=platform!=='android';
     for(const key of ['notification-critical','notification-persistent','notification-buttons','notification-tts','notification-tts-max','notification-alarm-stream','notification-screen-on','notification-open-alarm']){const field=this._field(key);if(field)field.closest('label').hidden=platform==='standard'||(['notification-persistent','notification-tts','notification-tts-max','notification-alarm-stream','notification-screen-on','notification-open-alarm'].includes(key)&&platform!=='android');}
     const message=this.shadowRoot.getElementById('action-notification'),targets=this.shadowRoot.getElementById('action-targets');
     if(message)message.hidden=kind!=='notify';if(targets)targets.hidden=kind==='notify';
-    const timed=this._field('timed');if(timed){timed.disabled=when!=='alarm'||timing!=='during'||!['siren','switch','light'].includes(kind);if(timed.disabled)timed.checked=false;}
+    const isAlarm=when==='alarm'&&timing==='during',stop=this.shadowRoot.getElementById('action-stop-option'),repeatOption=this.shadowRoot.getElementById('action-repeat-option'),repeatHint=this.shadowRoot.getElementById('action-repeat-hint');
+    if(repeatOption)repeatOption.hidden=!isAlarm;if(repeatHint)repeatHint.hidden=isAlarm;
+    const supported=['siren','switch','light'].includes(kind)&&this._val('service')==='turn_on';
+    if(stop)stop.hidden=!supported;
+    const timed=this._field('timed');if(timed){timed.disabled=!supported;if(!supported)timed.checked=false;}
+    const clock=this._field('action-stop-clock');if(clock){for(const option of clock.options)option.disabled=option.value==='alarm'&&!isAlarm;if(!isAlarm)clock.value='own';clock.closest('label').hidden=!timed?.checked;}
+    const own=this.shadowRoot.getElementById('action-own-duration');if(own)own.hidden=!supported||!timed?.checked||clock?.value!=='own';
     const preview=this.shadowRoot.getElementById('action-preview');
     if(preview)preview.textContent=(this._field('action-when')?.selectedOptions?.[0]?.textContent||'Bei Alarm')+' · '+(this._field('action-timing')?.selectedOptions?.[0]?.textContent||'')+' → '+(this._val('name')||'Aktion')+(kind==='notify'?' · '+(this._val('notify-message')||'Nachricht ergänzen'):` · ${this._dialog.selectedTargets?.size||0} Zielentitäten`);
   }
@@ -1902,7 +1915,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
       this._field('notification-platform')?.addEventListener('change',()=>this._updateActionControls());
       this._field('notification-tts')?.addEventListener('change',()=>this._updateActionControls());
       this._wireActionServicePicker();
-      for(const key of ['action-when','action-timing','name','notify-message','notify-service','notification-platform'])this._field(key)?.addEventListener('input',()=>this._updateActionControls());
+      for(const key of ['action-when','action-timing','name','notify-message','notify-service','notification-platform','timed','action-stop-clock'])this._field(key)?.addEventListener('input',()=>this._updateActionControls());
       this._field('domain')?.addEventListener('change',()=>{
         this._dialog.item.domain=this._val('domain');
         this._refreshActionChoices();
@@ -2008,9 +2021,11 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
       item.entity_ids=[...d.selectedTargets];
       try{item.data=JSON.parse(this._val('data'));}catch{throw Error('Service-Daten müssen gültiges JSON sein.');}
       item.mode_keys=this._doc.modes.filter(m=>this._checked('action-mode-'+m.key)).map(m=>m.key);
-      item.when=this._val('action-when')||'alarm';item.timing=this._val('action-timing')||(['armed','disarmed'].includes(item.when)?'after':'during');if(this._val('action-kind')!=='notify')delete item.notification;
+      item.when=this._val('action-when')||'alarm';item.timing=this._val('action-timing')||(['armed','disarmed','mute','acknowledge'].includes(item.when)?'after':'during');if(this._val('action-kind')!=='notify')delete item.notification;
       if(this._val('action-kind')==='notify'){item.notification={platform:this._val('notification-platform')||'standard',critical:this._checked('notification-critical'),persistent:this._checked('notification-persistent'),buttons:this._checked('notification-buttons'),tts:this._checked('notification-tts'),tts_max:this._checked('notification-tts-max'),tts_text:this._val('notification-tts-text'),tts_repeat_seconds:this._number('notification-tts-repeat'),screen_on:this._checked('notification-screen-on'),open_alarm:this._checked('notification-open-alarm'),alarm_stream:this._checked('notification-alarm-stream')};item.domain='notify';item.service=this._val('notify-service')||item.service;item.entity_ids=[];item.data.message=this._val('notify-message');if(!item.data.message)throw Error('Bitte eine Nachricht eingeben.');if(this._val('notify-title'))item.data.title=this._val('notify-title');else delete item.data.title;}
-      item.repeat_on_retrigger=this._checked('repeat_on_retrigger');item.timed=this._checked('timed');
+      item.enabled=this._checked('enabled');item.repeat_on_retrigger=item.when==='alarm'&&item.timing==='during'&&this._checked('repeat_on_retrigger');item.timed=this._checked('timed');
+      if(item.timed&&this._val('action-stop-clock')==='own')item.duration_seconds=this._number('action-duration');else delete item.duration_seconds;
+      if(item.duration_seconds!=null&&(item.duration_seconds<1||item.duration_seconds>86400))throw Error('Aktionsdauer muss zwischen einer Sekunde und 24 Stunden liegen.');
     }
     return item;
   }

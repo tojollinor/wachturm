@@ -1,7 +1,7 @@
 """Wachturm integration constants."""
 
 DOMAIN = "ha_alarmzentrale"
-VERSION = "0.8.5"
+VERSION = "0.8.6"
 NAME = "Wachturm"
 DEFAULT_ICON = "wachturm:shield"
 ALARM_ICON = "wachturm:shield"

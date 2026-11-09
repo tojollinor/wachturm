@@ -394,10 +394,10 @@ test('sabotage enable controls belong to system area and preserve sensor mapping
   const {panel}=setup();
   const sensor={name:'Tür',entities:[],sabotage:{entity_id:'binary_sensor.tamper',enabled:false,active_states:['on'],normal_states:['off']}};
   panel._doc={sensors:[sensor]};panel._dialog={item:{key:'system_sabotage',name:'Sabotage'}};
-  assert.match(panel._v2AreaDialog(),/area-sabotage-0/);
+  assert.doesNotMatch(panel._v2AreaDialog(),/area-sabotage-0|Zugeordnete Sensoren/);
   const candidate=plain(panel._doc);panel._checked=key=>key==='area-sabotage-0';
   panel._applyAreaMembers(candidate,{key:'system_sabotage'});
-  assert.equal(candidate.sensors[0].sabotage.enabled,true);
+  assert.equal(candidate.sensors[0].sabotage.enabled,false);
   assert.equal(candidate.sensors[0].sabotage.entity_id,'binary_sensor.tamper');
 });
 

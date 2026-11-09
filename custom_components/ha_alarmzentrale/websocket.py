@@ -413,6 +413,7 @@ async def ws_action_test(hass,connection,msg):
                 if not area or not mode:raise EditorError('Testbereich und Testmodus auswählen')
                 if area['key'] not in mode.get('area_keys',[]):raise EditorError('Der Testmodus verwendet diesen Bereich nicht')
                 action=parse_specs({'areas':[{'key':area['key'],'name':area['name'],'modes':[{'key':mode['key'],'name':mode['name']}],'actions':[msg.get('action',{})]}]})[0].actions[0]
+                if not action.enabled:raise ValueError('Zum Testen die Aktion im Dialog aktivieren.')
                 if action.mode_keys is not None and mode['key'] not in action.mode_keys:raise EditorError('Aktion ist in diesem Testmodus nicht aktiv')
                 # Validate the new draft first, then terminate and drain the prior
                 # test before any service for the new recipient can be sent.

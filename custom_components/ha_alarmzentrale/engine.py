@@ -68,10 +68,12 @@ class ActionSpec:
     notification: dict = field(default_factory=dict)
     mode_keys: tuple[str, ...] | None = None
     timing: str | None = None
+    enabled: bool = True
+    duration_seconds: int | None = None
 
     @property
     def effective_timing(self) -> str:
-        return self.timing or ("after" if self.when in {"armed", "disarmed"} else "during")
+        return self.timing or ("after" if self.when in {"armed", "disarmed", "mute", "acknowledge"} else "during")
 
     def __post_init__(self) -> None:
         if not self.key or not self.name:
@@ -92,16 +94,20 @@ class ActionSpec:
         interval=self.notification.get("tts_repeat_seconds",0)
         if type(interval) is not int or interval != 0 and not 10 <= interval <= 3600:
             raise ValueError("TTS interval must be 0 or 10–3600 seconds")
-        if self.when not in {"alarm", "armed", "disarmed", "battery", "offline", "unstable"}:
+        if self.when not in {"alarm", "armed", "disarmed", "battery", "offline", "unstable", "mute", "acknowledge"}:
             raise ValueError("Invalid action event")
-        allowed = {"armed": {"before", "during", "after"}, "disarmed": {"after"},
+        allowed = {"mute": {"after"}, "acknowledge": {"after"}, "armed": {"before", "during", "after"}, "disarmed": {"after"},
                    "alarm": {"before", "during", "after"}, "battery": {"during", "after"},
                    "offline": {"during", "after"}, "unstable": {"during", "after"}}
         if self.effective_timing not in allowed[self.when]:
             raise ValueError("Invalid action timing for event")
-        if self.effective_timing != "during" and (self.timed or self.notification.get("platform", "standard") != "standard"):
+        if type(self.enabled) is not bool or self.duration_seconds is not None and (type(self.duration_seconds) is not int or not 1 <= self.duration_seconds <= 86400):
+            raise ValueError("Invalid action enabled flag or duration")
+        if self.duration_seconds is not None and not self.timed:
+            raise ValueError("Action duration requires automatic output shutdown")
+        if self.effective_timing != "during" and (self.timed and self.duration_seconds is None or self.notification.get("platform", "standard") != "standard"):
             raise ValueError("Alarm output profiles require during timing")
-        if self.when != "alarm" and self.timed:
+        if self.when != "alarm" and self.timed and self.duration_seconds is None:
             raise ValueError("Timed outputs are only supported for alarm actions")
         if self.when in {"battery", "offline", "unstable"} and self.domain not in {"notify", "script"}:
             raise ValueError("Diagnostic actions must use notify or script")
@@ -300,6 +306,9 @@ class AreaController:
         self.arming_block_reason = ""
         self.zones = {zone.key: ZoneRuntime() for zone in spec.zones}
         self.last_event: AlarmEvent | None = None
+        self.phase_event_id: str | None = None
+        self.alarm_event_id: str | None = None
+        self.action_results: dict[str, dict] = {}
         self.history: list[AlarmEvent] = []
         self.alarm_sources: set[str] = set()
         self._listeners: list[Callable[[AlarmEvent], None]] = []
@@ -315,8 +324,8 @@ class AreaController:
 
         return unsubscribe
 
-    def _emit(self, kind: str, info: str = "", *, mode: str | None = None) -> None:
-        evt = AlarmEvent(self.spec.key, kind, mode or self.mode, self._clock(), info, current_event.get())
+    def _emit(self, kind: str, info: str = "", *, mode: str | None = None, cause: str | None = None) -> None:
+        evt = AlarmEvent(self.spec.key, kind, mode or self.mode, self._clock(), info, cause or current_event.get())
         self.last_event = evt
         self.history.append(evt)
         if len(self.history) > 250:
@@ -366,6 +375,7 @@ class AreaController:
         if self.mode == mode_key and self.phase != Phase.DISARMED:
             return
         deferred = self._preflight(mode_key)
+        self.phase_event_id=current_event.get()
         self._emit("arm_requested", mode=mode_key)
         was_armed = self.phase != Phase.DISARMED
         self.mode = mode_key
@@ -437,6 +447,7 @@ class AreaController:
             return self.trigger(zone_key)
         if self.phase != Phase.ARMED:
             return False
+        self.phase_event_id=current_event.get()
         self.phase = Phase.PENDING
         self.pending_zone = zone_key
         self.phase_deadline = self._clock() + seconds
@@ -448,7 +459,9 @@ class AreaController:
             return False
         mode = self.spec.mode(self.mode)
         fresh = not self.alarm_latched
-        if fresh:self.alarm_started_at=self._clock()
+        if fresh:
+            self.alarm_started_at=self._clock()
+            self.alarm_event_id=current_event.get()
         self.alarm_latched = True
         self.phase = Phase.TRIGGERED
         self.pending_zone = None
@@ -548,6 +561,7 @@ class AreaController:
         self.acknowledge(automatic=True)
 
     def record_action_result(self, action_key: str, *, success: bool, info: str = "") -> None:
+        self.action_results[action_key] = {"at": self._clock(), "success": success, "info": info[:300]}
         self._emit("action_succeeded" if success else "action_failed", f"{action_key}: {info}"[:300])
 
     def _activate_zone(self, zone: ZoneSpec) -> None:
@@ -590,7 +604,7 @@ class AreaController:
         except AlarmError as exc:
             self.phase_deadline = None
             self.arming_block_reason = str(exc)
-            self._emit("arming_waiting_for_sensor", str(exc))
+            self._emit("arming_waiting_for_sensor", str(exc),cause=self.phase_event_id)
             return
         for zone in self._zones_for(self.mode):
             rt = self.zones[zone.key]
@@ -600,7 +614,7 @@ class AreaController:
         self.phase = Phase.ARMED
         self.arming_block_reason = ""
         self.phase_deadline = None
-        self._emit("armed")
+        self._emit("armed",cause=self.phase_event_id)
         self._evaluate_fault_alarms()
         self._evaluate_diagnostic_arming()
 
@@ -616,10 +630,14 @@ class AreaController:
     @correlated
     def tick(self) -> None:
         now = self._clock()
-        if self.phase == Phase.ARMING and self.phase_deadline is not None and now >= self.phase_deadline:
-            self._complete_exit_delay()
-        if self.phase == Phase.PENDING and self.phase_deadline is not None and now >= self.phase_deadline:
-            self.trigger(self.pending_zone or "entry_timeout")
+        token=current_event.set(self.phase_event_id or current_event.get())
+        try:
+            if self.phase == Phase.ARMING and self.phase_deadline is not None and now >= self.phase_deadline:
+                self._complete_exit_delay()
+            if self.phase == Phase.PENDING and self.phase_deadline is not None and now >= self.phase_deadline:
+                self.trigger(self.pending_zone or "entry_timeout")
+        finally:
+            current_event.reset(token)
         if self.recovery_fault_until is not None and now >= self.recovery_fault_until:
             self.recovery_fault_until = None
             if not self.reconciling:
@@ -628,11 +646,14 @@ class AreaController:
             if now >= self.alarm_deadline:
                 self.action_window_active = False
                 self.alarm_deadline = None
-                self._emit("action_window_expired")
+                self._emit("action_window_expired",cause=self.alarm_event_id)
 
     def snapshot(self) -> dict:
         return {
             "schema": 4,
+            "action_results": self.action_results,
+            "phase_event_id": self.phase_event_id,
+            "alarm_event_id": self.alarm_event_id,
             "mode": self.mode,
             "phase": self.phase.value,
             "phase_deadline": self.phase_deadline,
@@ -730,6 +751,25 @@ class AreaController:
             raise AlarmError('Invalid saved alarm start')
         if started is None:started=next((e.when for e in reversed(history) if e.kind=='alarm_started'),None)
         self.alarm_started_at=started if latched else None
+        for field in ('phase_event_id','alarm_event_id'):
+            value=saved.get(field)
+            if value is not None and (not isinstance(value,str) or len(value)>100):raise AlarmError('Invalid saved event correlation')
+            setattr(self,field,value)
+        results = saved.get("action_results", {})
+        if not isinstance(results, dict) or len(results)>1000:
+            raise AlarmError("Invalid saved action results")
+        self.action_results = {}
+        for key, result in results.items():
+            if (not isinstance(key,str) or not isinstance(result,dict) or type(result.get('at')) not in (int,float)
+                    or not float('-inf')<result['at']<float('inf') or type(result.get('success')) is not bool
+                    or not isinstance(result.get('info',''),str) or len(result.get('info',''))>300):
+                raise AlarmError("Invalid saved action result")
+            if any(action.key==key for action in self.spec.actions):self.action_results[key]=dict(result)
+        for record in history:
+            if record.kind not in {'action_succeeded','action_failed'}:continue
+            key=record.info.split(':',1)[0]
+            if key not in results and any(action.key==key for action in self.spec.actions):
+                self.action_results[key]={'at':record.when,'success':record.kind=='action_succeeded','info':record.info[:300]}
         self.history = history
         self.alarm_sources = alarm_sources
         self.mode = mode

@@ -28,6 +28,8 @@ from .diagnostic_policy import selected_reactions, arming_faults
 from .const import DOMAIN, STORAGE_VERSION, NAME, LEGACY_DEFAULT_NAMES
 from .engine import AlarmEngine, AlarmError
 from .ha_actions import HAActionDispatcher
+from .event_context import current_event
+from uuid import uuid4
 from .security import AccessDenied, Authorization
 from .commands import AlarmCommands
 from .audit import AuditTrail
@@ -175,8 +177,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if entity_id:
                 if commands.test_active() and runtime.sensor_test:
                     runtime.sensor_test.observe_config(full_config,entity_id,new_state.state if new_state is not None else None,getattr(new_state,"attributes",None) if new_state is not None else None)
-                engine.update_sensor(entity_id, new_state.state if new_state is not None else None,
-                                     attributes=getattr(new_state, "attributes", None) if new_state is not None else None)
+                context=getattr(event,'context',None)
+                token=current_event.set(getattr(context,'parent_id',None) or getattr(context,'id',None) or uuid4().hex)
+                try:
+                    engine.update_sensor(entity_id, new_state.state if new_state is not None else None,
+                                         attributes=getattr(new_state, "attributes", None) if new_state is not None else None)
+                finally:
+                    current_event.reset(token)
+
 
         entry.async_on_unload(async_track_state_change_event(hass, observed_entities, on_sensor_event))
 
@@ -186,37 +194,41 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # A multi-device radio outage must not masquerade as many intrusions.
             common_outage = any(e.kind == "common_outage_suspected" for e in diagnostics.last_events)
             for event in diagnostics.last_events:
-                if event.kind not in {"offline", "offline_unstable", "battery", "unstable", "battery_recovered", "online", "stable_recovery"}:
-                    continue
-                if event.kind == "battery" and event.detail not in {"low", "empty"}:
-                    continue
-                # Explicit diagnostic notifications are independent of arming.
-                # They cannot use timed sirens or mutate the alarm latch.
-                notification_kind = "unstable" if event.kind == "offline_unstable" else event.kind
-                for area_key, area in engine.areas.items():
-                    belongs = any((sensor.get("device_id") or sensor.get("key")) == event.source and (
-                        any(m.get("area") == area_key for m in sensor.get("memberships", [])) or
-                        (area_key == "system_sabotage" and sensor.get("sabotage") and sensor["sabotage"].get("enabled", True)))
-                        for sensor in full_config.get("sensors", []))
-                    action_kind = {"battery_recovered": "battery", "online": "offline", "stable_recovery": "unstable"}.get(notification_kind, notification_kind)
-                    if belongs and any(action.when == action_kind for action in area.spec.actions):
-                        area._emit(f"diagnostic_{notification_kind}", event.source)
-                for key, area in engine.areas.items():
-                    if (area.mode is None or area.reconciling or
-                            area.phase.value not in {"armed", "pending", "triggered"}):
+                token=current_event.set(current_event.get() or uuid4().hex)
+                try:
+                    if event.kind not in {"offline", "offline_unstable", "battery", "unstable", "battery_recovered", "online", "stable_recovery"}:
                         continue
-                    choices = selected_reactions(
-                        full_config, event.source, key, area.mode, event.kind,
-                        low_battery="previous low-battery indication" in event.detail,
-                    )
-                    if "event" in choices and hasattr(hass.bus, "async_fire"):
-                        hass.bus.async_fire(f"{DOMAIN}_diagnostic", {
-                            "area_key": key, "mode": area.mode, "device_id": event.source,
-                            "kind": event.kind, "detail": event.detail,
-                        })
-                    if ("alarm" in choices and event.kind == "offline" and
-                            not common_outage and area.monitoring_ready):
-                        area.trigger(f"diagnostic_offline:{event.source}")
+                    if event.kind == "battery" and event.detail not in {"low", "empty"}:
+                        continue
+                    # Explicit diagnostic notifications are independent of arming.
+                    # They cannot use timed sirens or mutate the alarm latch.
+                    notification_kind = "unstable" if event.kind == "offline_unstable" else event.kind
+                    for area_key, area in engine.areas.items():
+                        belongs = any((sensor.get("device_id") or sensor.get("key")) == event.source and (
+                            any(m.get("area") == area_key for m in sensor.get("memberships", [])) or
+                            (area_key == "system_sabotage" and sensor.get("sabotage") and sensor["sabotage"].get("enabled", True)))
+                            for sensor in full_config.get("sensors", []))
+                        action_kind = {"battery_recovered": "battery", "online": "offline", "stable_recovery": "unstable"}.get(notification_kind, notification_kind)
+                        if belongs and any(action.when == action_kind for action in area.spec.actions):
+                            area._emit(f"diagnostic_{notification_kind}", event.source)
+                    for key, area in engine.areas.items():
+                        if (area.mode is None or area.reconciling or
+                                area.phase.value not in {"armed", "pending", "triggered"}):
+                            continue
+                        choices = selected_reactions(
+                            full_config, event.source, key, area.mode, event.kind,
+                            low_battery="previous low-battery indication" in event.detail,
+                        )
+                        if "event" in choices and hasattr(hass.bus, "async_fire"):
+                            hass.bus.async_fire(f"{DOMAIN}_diagnostic", {
+                                "area_key": key, "mode": area.mode, "device_id": event.source,
+                                "kind": event.kind, "detail": event.detail,
+                            })
+                        if ("alarm" in choices and event.kind == "offline" and
+                                not common_outage and area.monitoring_ready):
+                            area.trigger(f"diagnostic_offline:{event.source}")
+                finally:
+                    current_event.reset(token)
 
         @callback
         def on_diagnostic_state(_event) -> None:
@@ -256,14 +268,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             commands.from_event("alarmzentrale_entity", {"entity_id": event.data.get("entity_id"), "state": new.state})
         entry.async_on_unload(async_track_state_change_event(hass, controls, on_control_state))
 
-    for entity_id in engine.watched_entities:
-        current = hass.states.get(entity_id)
-        engine.update_sensor(entity_id, current.state if current is not None else None, initial=True,
-                             attributes=getattr(current, "attributes", None) if current is not None else None)
-    engine.finish_recovery()
-    for area in engine.areas.values():
-        if area.alarm_latched:
-            area._emit("notification_refresh")
+    startup_token=current_event.set(uuid4().hex)
+    try:
+        for entity_id in engine.watched_entities:
+            current = hass.states.get(entity_id)
+            engine.update_sensor(entity_id, current.state if current is not None else None, initial=True,
+                                 attributes=getattr(current, "attributes", None) if current is not None else None)
+        engine.finish_recovery()
+        for area in engine.areas.values():
+            if area.alarm_latched:
+                area._emit("notification_refresh")
+    
+    finally:
+        current_event.reset(startup_token)
 
     @callback
     def on_tick(_now) -> None:

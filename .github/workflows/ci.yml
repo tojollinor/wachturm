@@ -34,4 +34,5 @@ jobs:
         run: |
           mkdir -p qa
           python tools/check_ui.py
+          python tools/check_revision6_ui.py
           python tools/check_revision9_ui.py

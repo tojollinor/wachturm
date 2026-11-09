@@ -20,14 +20,22 @@ def run():
         page.add_script_tag(path=str(ROOT/'custom_components/ha_alarmzentrale/frontend/wachturm-icons.js'))
         page.add_script_tag(content=NATIVE_STUBS)
         page.add_script_tag(content="customElements.define('ha-card',class extends HTMLElement{connectedCallback(){this.style.display='block';this.style.borderRadius='16px';this.style.background='var(--card-background-color)';}})")
+        page.add_script_tag(content="""customElements.define('ha-alarmzentrale-card',class AlarmCard extends HTMLElement{
+          constructor(){super();this.attachShadow({mode:'open'});this._view=null;this._busy=false;this._error='';}
+          setConfig(c){this._config=c;}set hass(h){this._hass=h;}
+          connectedCallback(){this.shadowRoot.innerHTML='<ha-card style="height:220px">Alte Card</ha-card>';}
+        });const c=document.createElement('ha-alarmzentrale-card');c.setConfig({entity:'alarm_control_panel.zentrale'});c.hass=window.hassMock;c.style.height='220px';c.style.minHeight='220px';document.querySelector('#card').append(c);""")
         page.add_script_tag(path=str(ROOT/'custom_components/ha_alarmzentrale/frontend/alarmzentrale-card.js'))
-        page.evaluate("()=>{const c=document.createElement('ha-alarmzentrale-card');c.setConfig({entity:'alarm_control_panel.zentrale'});c.hass=window.hassMock;document.querySelector('#card').append(c);}")
+        page.evaluate("document.querySelector('ha-alarmzentrale-card').load()")
         card=page.locator('ha-alarmzentrale-card');page.wait_for_function("document.querySelector('ha-alarmzentrale-card')._view")
+        assert card.get_attribute('data-card-version')=='0.8.6'
+        assert card.bounding_box()['height'] < 190
+        assert card.evaluate("el=>el.getGridOptions().rows")=='auto'
         assert card.locator('a').count()==0
         assert card.locator('h2').evaluate('el=>getComputedStyle(el).fontSize')=='16px'
         assert card.locator('.alarm-symbol').evaluate('el=>getComputedStyle(el).getPropertyValue("--mdc-icon-size").trim()')=='30px'
         assert card.locator('.alarm-symbol').get_attribute('icon')=='mdi:shield-off-outline'
-        assert card.locator('ha-card').evaluate('el=>getComputedStyle(el).paddingTop')=='10px'
+        assert card.locator('ha-card').evaluate('el=>getComputedStyle(el).paddingTop')=='8px'
         assert card.locator('.alarm-symbol').bounding_box()['x']-card.locator('.title>div').bounding_box()['x']-card.locator('.title>div').bounding_box()['width'] < 15
         page.screenshot(path=str(ROOT/'qa/card-compact-0.8.5.png'),full_page=True)
         detail=card.locator('[data-detail-key="readiness"]');detail.locator('summary').click()

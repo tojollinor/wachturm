@@ -62,7 +62,7 @@ class ActionSimulation:
 
     async def start(self):
         event=self.area.last_event
-        kind={'armed':'armed','disarmed':'disarmed','battery':'diagnostic_battery','offline':'diagnostic_offline','unstable':'diagnostic_unstable'}.get(self.action.when,'alarm_started')
+        kind={'armed':'armed','disarmed':'disarmed','battery':'diagnostic_battery','offline':'diagnostic_offline','unstable':'diagnostic_unstable','mute':'actions_muted','acknowledge':'alarm_acknowledged'}.get(self.action.when,'alarm_started')
         await self.runner._start(self.action,replace(event,kind=kind))
         if self.area.last_event.kind=='action_failed':raise ValueError('Testaktion fehlgeschlagen; Dienst und Empfänger prüfen')
 
@@ -92,7 +92,7 @@ class ActionSimulation:
         try:
             while not self.done.is_set() and time.time()<self.until:
                 try:await asyncio.wait_for(self.done.wait(),timeout=min(1,max(.01,self.until-time.time())))
-                except asyncio.TimeoutError:await self.runner.repeat_tts()
+                except asyncio.TimeoutError:await self.runner.tick()
         finally:
             await self.stop()
 

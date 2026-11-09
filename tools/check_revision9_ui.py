@@ -90,10 +90,9 @@ def run():
         for width in [1180,390]:
             page.set_viewport_size({'width':width,'height':900})
             assert root.locator('img.brand-logo').is_visible()
-            row=root.locator('.sabotage-sensor-row').first
-            title=row.locator('.item-title').bounding_box();statuses=row.locator('.entity-statuses').bounding_box()
-            assert statuses['y']>=title['y']+title['height']
-            assert row.evaluate('el=>el.scrollWidth<=el.clientWidth')
+            assert root.get_by_text('Zugeordnete Sensoren',exact=True).count()==0
+            assert root.locator('[data-field^="area-sabotage-"]').count()==0
+            assert root.locator('.modal').evaluate('el=>el.scrollWidth<=el.clientWidth')
         page.screenshot(path=str(ROOT/'qa/sabotage-mobile-dev9.png'),full_page=True)
         root.locator('[data-dialog-action=cancel]').click()
         # Create a second test to verify its full-screen card never controls real state.

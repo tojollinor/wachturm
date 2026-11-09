@@ -46,9 +46,11 @@ class HAActionDispatcher:
         backend = HAActionBackend(hass)
         self.notification_links = backend.notification_links
         self.runners = {key: ActionRunner(area, backend) for key, area in engine.areas.items()}
+        seen={}
         for runner in self.runners.values():
+            runner.seen=seen
             if runner.area.alarm_latched:
-                runner.mobile_active = {a.key for a in runner.area.spec.actions if a.notification.get("platform") in {"ios", "android"} and (a.mode_keys is None or runner.area.mode in a.mode_keys)}
+                runner.mobile_active = {a.key for a in runner.area.spec.actions if a.enabled and a.notification.get("platform") in {"ios", "android"} and (a.mode_keys is None or runner.area.mode in a.mode_keys)}
         self.queues: dict[str, asyncio.Queue[AlarmEvent | None]] = {}
         self.tasks: list[asyncio.Task] = []
         self.stopping = False
@@ -81,13 +83,14 @@ class HAActionDispatcher:
                 evt=await asyncio.wait_for(q.get(),timeout=1)
             except asyncio.TimeoutError:
                 if not self.stopping:
-                    await runner.repeat_tts()
+                    await runner.tick()
                 continue
             if evt is None:
                 break
             try:
                 self.in_flight.add(key)
                 await runner.handle(evt)
+                await runner.tick()
             except Exception:
                 _LOGGER.exception("Unhandled action dispatch error for area %s", key)
             finally:

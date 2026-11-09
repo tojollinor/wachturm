@@ -84,6 +84,8 @@ Sensoren können über **Bearbeiten → Bereich** verschoben werden. Dabei gelte
 
 Aktionen werden über Modi zugeordnet. Eine zusätzliche Bereichsauswahl ist nicht erforderlich. Unter **Was soll passieren?** wählst du die gewünschte HA-Aktion aus der alphabetischen Liste mit Suche nach Name oder technischer Kennung. Ergänze anschließend Zielentitäten und bei Bedarf zusätzliche Daten.
 
+Aktionen können über den Schalter in der Aktionsliste deaktiviert werden; ihre Einstellungen bleiben erhalten. **Zuletzt ausgeführt** zeigt Zeitpunkt und Ergebnis und bleibt auch nach einem Neustart erhalten. Ausführung und Konfigurationsänderung bleiben durch die bestehenden Benutzerrechte und Sperren geschützt.
+
 ### Wann Aktionen ausgeführt werden
 
 Wähle zuerst ein **Ereignis**, danach den **Zeitpunkt**:
@@ -93,13 +95,17 @@ Wähle zuerst ein **Ereignis**, danach den **Zeitpunkt**:
 | Scharfschalten | Angenommener Schaltauftrag nach erfolgreicher Bereitschaftsprüfung | Beginn der Ausgangszeit | Überwachung ist scharf |
 | Alarm | Beginn der Eingangszeit | Alarmauslösung | Alarm quittiert oder Anlage deaktiviert |
 | Unscharfschalten | – | – | Anlage deaktiviert |
+| Quittieren | – | – | Alarm quittiert |
+| Stummschalten | – | – | Alarmaktionen stummgeschaltet |
 | Batteriewarnung | – | Warnung erkannt | Batterie wieder normal |
 | Verbindungsverlust | – | Verlust erkannt | Gerät wieder erreichbar |
 | Instabile Verbindung | – | Instabilität erkannt | Verbindung über die Erholungszeit stabil |
 
-Ohne Ausgangs- oder Eingangszeit entfällt der jeweilige Verzögerungszeitpunkt. Aktionen laufen asynchron und halten die Scharfschaltung nicht auf. Störungen sind nicht vorhersehbar; deshalb ist dort **Vor** gesperrt. Bestehende Aktionen behalten ihr bisheriges Verhalten. Mobile Alarmprofile und automatisch beendete Alarm-Ausgänge stehen für **Alarm → Während** zur Verfügung.
+Ohne Ausgangs- oder Eingangszeit entfällt der jeweilige Verzögerungszeitpunkt. Aktionen laufen asynchron und halten die Scharfschaltung nicht auf. Störungen sind nicht vorhersehbar; deshalb ist dort **Vor** gesperrt. Bestehende Aktionen behalten ihr bisheriges Verhalten. Mobile Alarmprofile stehen für **Alarm → Während** zur Verfügung. Unterstützte Sirenen, Lichter und Schalter können nach einer **eigenen Aktionsdauer** automatisch ausgeschaltet werden, auch bei Schalt-, Quittier- und Stummschaltereignissen. Während eines Alarms kann alternativ die Alarmaktionsdauer des Modus verwendet werden. Bereits eingeschaltete oder zwischenzeitlich anderweitig veränderte Ausgänge werden nicht übernommen.
 
 ## Dashboard-Card
+
+Die Card verwendet automatische Höhe für das HA-Raster. Bereits geladene ältere Card-Registrierungen werden beim Laden der neuen Version aktualisiert. Im Card-Editor wird die geladene Card-Version angezeigt.
 
 Die Card wird zusammen mit der Integration bereitgestellt. Wähle beim Bearbeiten eines Dashboards **Wachturm – Alarmsteuerung** und anschließend das zentrale Wachturm-Panel.
 
@@ -112,7 +118,7 @@ type: custom:ha-alarmzentrale-card
 entity: alarm_control_panel.wachturm
 ```
 
-Ersetze die Beispiel-Entität durch dein tatsächlich vorhandenes zentrales Panel. Wenn die automatische Bereitstellung in deinem Dashboard nicht greift, ergänze `/ha_alarmzentrale_assets/alarmzentrale-card.js?v=0.8.5` als JavaScript-Modul unter den Dashboard-Ressourcen.
+Ersetze die Beispiel-Entität durch dein tatsächlich vorhandenes zentrales Panel. Wenn die automatische Bereitstellung in deinem Dashboard nicht greift, ergänze `/ha_alarmzentrale_assets/alarmzentrale-card.js?v=0.8.6` als JavaScript-Modul unter den Dashboard-Ressourcen.
 
 Bei konfiguriertem PIN-Schutz öffnet sich das integrierte PIN-Pad. Blockierte Modi sind nicht aktivierbar. Im Alarmfall pulsieren Symbol und Kartenrahmen; Stummschalten lässt Auslöser und Alarmdauer sichtbar.
 

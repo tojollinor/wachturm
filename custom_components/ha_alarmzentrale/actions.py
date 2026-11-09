@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 import time
+from hashlib import sha256
+from .event_context import current_event
 
 from .notifications import notification_payload, tts_payload
 from .engine import ActionSpec, AlarmEvent, AreaController, Phase
@@ -29,8 +31,29 @@ class ActionRunner:
     executed: set[str] = field(default_factory=set)
     mobile_active: set[str] = field(default_factory=set)
 
+    output_events: dict = field(default_factory=dict)
+    output_due: dict = field(default_factory=dict)
+    seen: dict = field(default_factory=dict)
     tts_due: dict = field(default_factory=dict)
     tts_started: set = field(default_factory=set)
+
+    async def tick(self):
+        for key, due in tuple(self.output_due.items()):
+            if time.monotonic() >= due:
+                token=current_event.set(self.output_events.get(key))
+                try:
+                    await self.stop_timed_outputs(only={key})
+                finally:
+                    current_event.reset(token)
+                if key not in self.owned:self.output_due.pop(key,None)
+        await self.repeat_tts()
+
+    async def handle(self, event: AlarmEvent) -> None:
+        token=current_event.set(event.event_id)
+        try:
+            await self._handle(event)
+        finally:
+            current_event.reset(token)
 
     async def repeat_tts(self):
         if not self.area.alarm_latched or not self.area.action_window_active:
@@ -48,10 +71,10 @@ class ActionRunner:
             except Exception as exc:
                 self.area.record_action_result(key,success=False,info=f"TTS: {type(exc).__name__}")
 
-    async def handle(self, event: AlarmEvent) -> None:
+    async def _handle(self, event: AlarmEvent) -> None:
         if event.kind in {"zone_normal", "actions_muted", "action_window_expired", "disarmed", "alarm_ended", "alarm_acknowledged", "notification_refresh"}:
             for action in self.area.spec.actions:
-                if action.key in self.mobile_active:
+                if action.enabled and action.key in self.mobile_active:
                     await self._notify(action, event, quiet=True)
             if event.kind in {"disarmed", "alarm_ended", "alarm_acknowledged"}:
                 self.mobile_active.clear()
@@ -64,9 +87,14 @@ class ActionRunner:
                     except Exception as exc:
                         self.area.record_action_result(action.key,success=False,info=f"TTS stop: {type(exc).__name__}")
             self.tts_started.clear()
-            await self.stop_timed_outputs()
+            await self.stop_timed_outputs(only={a.key for a in self.area.spec.actions if a.duration_seconds is None} if event.kind=="action_window_expired" else None)
             if event.kind in ("alarm_acknowledged", "alarm_ended", "disarmed"):
                 self.executed.clear()
+        operation={"actions_muted":"mute","alarm_acknowledged":"acknowledge"}.get(event.kind)
+        if operation:
+            for action in self.area.spec.actions:
+                if action.when==operation and (action.mode_keys is None or event.mode in action.mode_keys):
+                    await self._start(action,event)
         special = {"arm_requested": ("armed", "before"), "arming": ("armed", "during"),
                    "entry_delay_started": ("alarm", "before"),
                    "alarm_acknowledged": ("alarm", "after"), "alarm_ended": ("alarm", "after"),
@@ -95,6 +123,8 @@ class ActionRunner:
             if route == "disarmed" and self.area.phase != Phase.DISARMED:
                 return
             for action in self.area.spec.actions:
+                if route == 'armed' and self.area.phase != Phase.ARMED or route == 'disarmed' and self.area.phase != Phase.DISARMED:
+                    break
                 if action.when == route and action.effective_timing == ("after" if route in {"armed", "disarmed"} else "during") and (action.mode_keys is None or event.mode in action.mode_keys):
                     await self._start(action, event)
             return
@@ -116,7 +146,7 @@ class ActionRunner:
             mobile = action.notification.get("platform") in {"ios", "android"}
             if event.kind == "alarm_retriggered" and not action.repeat_on_retrigger and not mobile:
                 continue
-            if action.timed and not self.area.action_window_active:
+            if action.timed and action.duration_seconds is None and not self.area.action_window_active:
                 continue
             if action.key in self.executed and not action.repeat_on_retrigger and not mobile:
                 continue
@@ -153,6 +183,12 @@ class ActionRunner:
             self.area.record_action_result(action.key, success=True, info="notify")
 
     async def _start(self, action: ActionSpec, event: AlarmEvent) -> None:
+        if not action.enabled:return
+        identity=(event.event_id,event.kind,action.key,sha256(repr(action).encode()).digest())
+        if event.event_id:
+            if identity in self.seen:return
+            self.seen[identity]=True
+            if len(self.seen)>2048:self.seen.pop(next(iter(self.seen)))
         if action.domain == "notify":
             await self._notify(action, event, quiet=event.kind=="alarm_retriggered" and not action.repeat_on_retrigger)
             return
@@ -188,11 +224,14 @@ class ActionRunner:
                 self.area.record_action_result(action.key, success=False, info=f"start {entity_id}: {type(exc).__name__}")
             else:
                 self.owned.setdefault(action.key, {})[entity_id] = self.backend.read_revision(entity_id)
+                if action.duration_seconds is not None:
+                    self.output_due[action.key]=time.monotonic()+action.duration_seconds
+                    self.output_events[action.key]=event.event_id
                 self.area.record_action_result(action.key, success=True, info=f"started {entity_id}")
 
-    async def stop_timed_outputs(self) -> None:
+    async def stop_timed_outputs(self, only=None) -> None:
         for action in self.area.spec.actions:
-            if not action.timed:
+            if not action.timed or only is not None and action.key not in only:
                 continue
             entity_ids = self.owned.get(action.key)
             if not entity_ids:
@@ -219,3 +258,5 @@ class ActionRunner:
                     self.area.record_action_result(action.key, success=True, info=f"stopped {entity_id}")
             if not entity_ids:
                 self.owned.pop(action.key, None)
+                self.output_due.pop(action.key,None)
+                self.output_events.pop(action.key,None)

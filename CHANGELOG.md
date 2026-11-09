@@ -1,5 +1,15 @@
 # Änderungen
 
+## 0.8.6
+
+- Sensorliste und Überwachungsschalter vollständig aus den Bereichseinstellungen entfernt; Änderungen bleiben direkt in der Bereichsübersicht.
+- Card mit automatischer Rasterhöhe und Aktualisierung bereits registrierter älterer Card-Versionen.
+- Ereigniskennungen bleiben über Hintergrundaktionen und Verzögerungen hinweg erhalten. Sensor-Baselines beim Start gehören zu einem gemeinsamen Vorgang.
+- Aktionen für Quittieren und Stummschalten, passend zum jeweiligen Zeitpunkt.
+- Ein-/Ausschalter für Aktionen und persistente Anzeige der letzten Ausführung samt Ergebnis.
+- Kontextabhängige Optionen und eigene Ausschaltzeiten für unterstützte Ausgänge auch außerhalb eines Alarms.
+- Identische modusweite Aktionen werden pro auslösendem Ereignis nur einmal ausgeführt.
+
 ## 0.8.5
 
 - Deutlich kompaktere Dashboard-Card mit natürlicher Höhe und näher am Text platziertem Statussymbol.
