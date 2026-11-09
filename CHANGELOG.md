@@ -1,5 +1,14 @@
 # Änderungen
 
+## 0.8.1 (noch nicht veröffentlicht)
+
+- Kompaktere Statusanzeige und Dashboard-Card mit zustandsabhängigen Symbolen; das Logo bleibt im Verwaltungskopf und bei der Integration.
+- Aktionen mit getrennter Auswahl von Ereignis und Zeitpunkt (Vor / Während / Nach).
+- Scharfschaltaktionen nach erfolgreicher Bereitschaftsprüfung, zum Beginn der Ausgangszeit oder nach abgeschlossener Scharfschaltung.
+- Aktionen bei Beginn einer Eingangszeit und nach Beendigung eines Alarms.
+- Batterie- und Verbindungsaktionen bei Störung oder Wiederherstellung; kein vorheriger Zeitpunkt für unvorhersehbare Störungen.
+- Vorhandene Aktionen behalten ihren bisherigen Ausführungszeitpunkt.
+
 ## 0.8.0
 
 - Alarmsteuerung mit Sensoren, Bereichen, eigenen Modi und konfigurierbaren Aktionen.

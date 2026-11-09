@@ -66,6 +66,8 @@ class HAActionDispatcher:
             return
         q = self.queues.get(event.area)
         if q is not None and event.kind in {
+            "arm_requested", "arming", "entry_delay_started", "alarm_ended",
+            "diagnostic_battery_recovered", "diagnostic_online", "diagnostic_stable_recovery",
             "alarm_started", "alarm_retriggered", "actions_muted", "armed",
             "diagnostic_battery", "diagnostic_offline", "diagnostic_unstable", "zone_normal", "notification_refresh",
             "action_window_expired", "alarm_acknowledged", "disarmed",

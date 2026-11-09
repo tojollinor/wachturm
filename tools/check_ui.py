@@ -198,13 +198,31 @@ def run():
         root.locator('[data-action="add"]').click()
         root.locator('[data-field="name"]').fill("Batteriewarnung Telefon")
         root.locator('[data-field="action-kind"]').select_option("notify")
-        root.locator('[data-field="action-when"]').select_option("battery")
+        when = root.locator('[data-field="action-when"]')
+        timing = root.locator('[data-field="action-timing"]')
+        when.select_option("armed")
+        for value in ["before", "during", "after"]:
+            timing.select_option(value)
+            assert timing.input_value() == value
+        timing.select_option("before")
+        when.select_option("unstable")
+        assert timing.input_value() == "during"
+        assert timing.locator('option[value="before"]').evaluate('(el)=>el.disabled'), timing.evaluate('(el)=>el.outerHTML')
+        timing.select_option("after")
+        assert "Erholungszeit" in root.locator('#action-timing-hint').inner_text()
+        when.select_option("disarmed")
+        assert timing.input_value() == "after"
+        assert timing.locator('option[value="during"]').evaluate('(el)=>el.disabled')
+        when.select_option("battery")
+        timing.select_option("after")
+        assert root.locator('[data-field="notification-platform"]').is_disabled()
+        page.screenshot(path=str(ROOT / "qa/action-timing.png"), full_page=True)
         root.locator('[data-field="notify-service"]').select_option("mobile_app_telefon")
         root.locator('[data-field="notify-message"]').fill("Bitte Batterie prüfen")
         root.get_by_role("button", name="Speichern", exact=True).click()
         page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
         action = json.loads(backend.raw)["areas"][0]["actions"][0]
-        assert action["when"] == "battery" and action["domain"] == "notify"
+        assert action["when"] == "battery" and action["domain"] == "notify" and action["timing"] == "after"
         # A role template writes explicit permissions; a HA user can be activated.
         root.get_by_role("button", name="Rollen", exact=True).click()
         root.locator('[data-action="add"]').click()

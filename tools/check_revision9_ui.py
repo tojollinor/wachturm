@@ -103,7 +103,7 @@ def run():
         card=root.locator('ha-alarmzentrale-card');card.wait_for()
         page.wait_for_function("document.querySelector('ha-alarmzentrale-panel').shadowRoot.querySelector('ha-alarmzentrale-card')._simulating")
         assert 'TEST' in card.locator('h2').inner_text()
-        assert card.locator('.alarm-symbol').get_attribute('icon')=='wachturm:shield'
+        assert card.locator('.alarm-symbol').get_attribute('icon')=='mdi:alarm-light-outline'
         timer=card.locator('[data-alarm-start]');assert timer.count()==1
         first=timer.inner_text();page.wait_for_timeout(1100);assert timer.inner_text()!=first
         assert card.locator('.contact-line.error').count()==1

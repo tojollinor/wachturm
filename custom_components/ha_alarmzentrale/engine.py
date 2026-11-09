@@ -67,6 +67,11 @@ class ActionSpec:
     when: str = "alarm"
     notification: dict = field(default_factory=dict)
     mode_keys: tuple[str, ...] | None = None
+    timing: str | None = None
+
+    @property
+    def effective_timing(self) -> str:
+        return self.timing or ("after" if self.when in {"armed", "disarmed"} else "during")
 
     def __post_init__(self) -> None:
         if not self.key or not self.name:
@@ -89,6 +94,13 @@ class ActionSpec:
             raise ValueError("TTS interval must be 0 or 10–3600 seconds")
         if self.when not in {"alarm", "armed", "disarmed", "battery", "offline", "unstable"}:
             raise ValueError("Invalid action event")
+        allowed = {"armed": {"before", "during", "after"}, "disarmed": {"after"},
+                   "alarm": {"before", "during", "after"}, "battery": {"during", "after"},
+                   "offline": {"during", "after"}, "unstable": {"during", "after"}}
+        if self.effective_timing not in allowed[self.when]:
+            raise ValueError("Invalid action timing for event")
+        if self.effective_timing != "during" and (self.timed or self.notification.get("platform", "standard") != "standard"):
+            raise ValueError("Alarm output profiles require during timing")
         if self.when != "alarm" and self.timed:
             raise ValueError("Timed outputs are only supported for alarm actions")
         if self.when in {"battery", "offline", "unstable"} and self.domain not in {"notify", "script"}:
@@ -354,6 +366,7 @@ class AreaController:
         if self.mode == mode_key and self.phase != Phase.DISARMED:
             return
         deferred = self._preflight(mode_key)
+        self._emit("arm_requested", mode=mode_key)
         was_armed = self.phase != Phase.DISARMED
         self.mode = mode_key
         self.pending_zone = None
@@ -396,6 +409,7 @@ class AreaController:
         if self.phase == Phase.DISARMED:
             return
         previous_mode = self.mode
+        had_alarm = self.alarm_latched
         self.mode = None
         self.phase = Phase.DISARMED
         self.phase_deadline = None
@@ -414,6 +428,8 @@ class AreaController:
             runtime.ignored_for_arming = False
             runtime.handled_active = False
             runtime.handled_fault = False
+        if had_alarm:
+            self._emit("alarm_ended", mode=previous_mode)
         self._emit("disarmed",mode=previous_mode)
 
     def begin_entry_delay(self, zone_key: str, seconds: int) -> bool:

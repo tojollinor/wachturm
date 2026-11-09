@@ -49,13 +49,13 @@ class ActionRunner:
                 self.area.record_action_result(key,success=False,info=f"TTS: {type(exc).__name__}")
 
     async def handle(self, event: AlarmEvent) -> None:
-        if event.kind in {"zone_normal", "actions_muted", "action_window_expired", "disarmed", "alarm_acknowledged", "notification_refresh"}:
+        if event.kind in {"zone_normal", "actions_muted", "action_window_expired", "disarmed", "alarm_ended", "alarm_acknowledged", "notification_refresh"}:
             for action in self.area.spec.actions:
                 if action.key in self.mobile_active:
                     await self._notify(action, event, quiet=True)
-            if event.kind in {"disarmed", "alarm_acknowledged"}:
+            if event.kind in {"disarmed", "alarm_ended", "alarm_acknowledged"}:
                 self.mobile_active.clear()
-        if event.kind in ("alarm_acknowledged", "disarmed", "actions_muted", "action_window_expired"):
+        if event.kind in ("alarm_acknowledged", "alarm_ended", "disarmed", "actions_muted", "action_window_expired"):
             self.tts_due.clear()
             for action in self.area.spec.actions:
                 if action.key in self.tts_started:
@@ -65,8 +65,25 @@ class ActionRunner:
                         self.area.record_action_result(action.key,success=False,info=f"TTS stop: {type(exc).__name__}")
             self.tts_started.clear()
             await self.stop_timed_outputs()
-            if event.kind in ("alarm_acknowledged", "disarmed"):
+            if event.kind in ("alarm_acknowledged", "alarm_ended", "disarmed"):
                 self.executed.clear()
+        special = {"arm_requested": ("armed", "before"), "arming": ("armed", "during"),
+                   "entry_delay_started": ("alarm", "before"),
+                   "alarm_acknowledged": ("alarm", "after"), "alarm_ended": ("alarm", "after"),
+                   "diagnostic_battery_recovered": ("battery", "after"),
+                   "diagnostic_online": ("offline", "after"),
+                   "diagnostic_stable_recovery": ("unstable", "after")}.get(event.kind)
+        if special:
+            if event.kind == "arming" and self.area.phase != Phase.ARMING:
+                return
+            if event.kind == "entry_delay_started" and self.area.phase != Phase.PENDING:
+                return
+            if event.kind == "arm_requested" and (self.area.phase == Phase.DISARMED or self.area.mode != event.mode):
+                return
+            for action in self.area.spec.actions:
+                if (action.when, action.effective_timing) == special and (action.mode_keys is None or event.mode in action.mode_keys):
+                    await self._start(action, event)
+            return
         route = {"alarm_started": "alarm", "alarm_retriggered": "alarm", "armed": "armed",
                  "disarmed": "disarmed", "diagnostic_battery": "battery",
                  "diagnostic_offline": "offline", "diagnostic_unstable": "unstable"}.get(event.kind)
@@ -78,7 +95,7 @@ class ActionRunner:
             if route == "disarmed" and self.area.phase != Phase.DISARMED:
                 return
             for action in self.area.spec.actions:
-                if action.when == route and (action.mode_keys is None or event.mode in action.mode_keys):
+                if action.when == route and action.effective_timing == ("after" if route in {"armed", "disarmed"} else "during") and (action.mode_keys is None or event.mode in action.mode_keys):
                     await self._start(action, event)
             return
         # A sensor can trigger and be disarmed before the async worker wakes.
@@ -88,7 +105,7 @@ class ActionRunner:
         if event.kind == "alarm_started":
             self.executed.clear()
         for action in self.area.spec.actions:
-            if action.when != "alarm":
+            if action.when != "alarm" or action.effective_timing != "during":
                 continue
             if action.mode_keys is not None and event.mode not in action.mode_keys:
                 continue

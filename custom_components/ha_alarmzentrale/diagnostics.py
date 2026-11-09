@@ -122,9 +122,13 @@ class Diagnostics:
         if state.battery == value:
             state.battery_at = at
             return []
+        recovered = state.battery in (Battery.LOW, Battery.EMPTY) and value == Battery.GOOD
         state.battery = value
         state.battery_at = at
-        return [self._emit(at, "battery", device, value.value)]
+        events = [self._emit(at, "battery", device, value.value)]
+        if recovered:
+            events.append(self._emit(at, "battery_recovered", device))
+        return events
 
     def connectivity_update(self, device: str, value: Connectivity | str, at: datetime) -> list[Event]:
         at = self._check(at)
@@ -137,6 +141,8 @@ class Diagnostics:
         previous = state.connectivity
         state.connectivity = value
         events = [self._emit(at, "connectivity", device, value.value)]
+        if previous == Connectivity.OFFLINE and value == Connectivity.ONLINE:
+            events.append(self._emit(at, "online", device))
         if value == Connectivity.ONLINE:
             state.online_since = at
             state.offline_since = None

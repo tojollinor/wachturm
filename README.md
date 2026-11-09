@@ -76,10 +76,25 @@ Der technische Ordnername bleibt `ha_alarmzentrale`. Das erhält auch bei besteh
 2. **Sensoren hinzufügen:** Wähle das Gerät und die überwachten Entitäten. Ergänze bei Bedarf Sabotagekontakt, Batterie- und Verbindungsquellen.
 3. **Bereiche anlegen:** Fasse die passenden Sensoren zusammen. Der feste Sabotagebereich übernimmt die zugeordneten Sabotagekontakte.
 4. **Modi einrichten:** Ordne Bereiche zu, stelle Zeiten ein und wähle das Verhalten je Sensor. Modi können zunächst auch ohne Bereich angelegt werden.
-5. **Aktionen festlegen:** Wähle Empfänger oder Ausgänge, Ereignis, Bereiche und Modi.
+5. **Aktionen festlegen:** Wähle Empfänger oder Ausgänge, Ereignis, Zeitpunkt, Bereiche und Modi.
 6. **Funktion prüfen:** Verwende den Sensortest unter Diagnose und den Aktionstest direkt im jeweiligen Aktionsdialog.
 
 **Speichern** im jeweiligen Dialog übernimmt die Änderung direkt. Konfigurationsänderungen sind möglich, wenn die Anlage deaktiviert, Alarme quittiert und laufende Aktionen abgeschlossen sind.
+
+### Wann Aktionen ausgeführt werden
+
+Wähle zuerst ein **Ereignis**, danach den **Zeitpunkt**:
+
+| Ereignis | Vor | Während | Nach |
+| --- | --- | --- | --- |
+| Scharfschalten | Angenommener Schaltauftrag nach erfolgreicher Bereitschaftsprüfung | Beginn der Ausgangszeit | Überwachung ist scharf |
+| Alarm | Beginn der Eingangszeit | Alarmauslösung | Alarm quittiert oder Anlage deaktiviert |
+| Unscharfschalten | – | – | Anlage deaktiviert |
+| Batteriewarnung | – | Warnung erkannt | Batterie wieder normal |
+| Verbindungsverlust | – | Verlust erkannt | Gerät wieder erreichbar |
+| Instabile Verbindung | – | Instabilität erkannt | Verbindung über die Erholungszeit stabil |
+
+Ohne Ausgangs- oder Eingangszeit entfällt der jeweilige Verzögerungszeitpunkt. Aktionen laufen asynchron und halten die Scharfschaltung nicht auf. Störungen sind nicht vorhersehbar; deshalb ist dort **Vor** gesperrt. Bestehende Aktionen behalten ihr bisheriges Verhalten. Mobile Alarmprofile und automatisch beendete Alarm-Ausgänge stehen für **Alarm → Während** zur Verfügung.
 
 ## Dashboard-Card
 
@@ -94,7 +109,7 @@ type: custom:ha-alarmzentrale-card
 entity: alarm_control_panel.wachturm
 ```
 
-Ersetze die Beispiel-Entität durch dein tatsächlich vorhandenes zentrales Panel. Wenn die automatische Bereitstellung in deinem Dashboard nicht greift, ergänze `/ha_alarmzentrale_assets/alarmzentrale-card.js?v=0.8.0` als JavaScript-Modul unter den Dashboard-Ressourcen.
+Ersetze die Beispiel-Entität durch dein tatsächlich vorhandenes zentrales Panel. Wenn die automatische Bereitstellung in deinem Dashboard nicht greift, ergänze `/ha_alarmzentrale_assets/alarmzentrale-card.js?v=0.8.1` als JavaScript-Modul unter den Dashboard-Ressourcen.
 
 Bei konfiguriertem PIN-Schutz öffnet sich das integrierte PIN-Pad. Blockierte Modi sind nicht aktivierbar. Im Alarmfall pulsieren Symbol und Kartenrahmen; Stummschalten lässt Auslöser und Alarmdauer sichtbar.
 

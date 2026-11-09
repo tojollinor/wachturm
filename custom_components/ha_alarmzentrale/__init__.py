@@ -186,7 +186,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # A multi-device radio outage must not masquerade as many intrusions.
             common_outage = any(e.kind == "common_outage_suspected" for e in diagnostics.last_events)
             for event in diagnostics.last_events:
-                if event.kind not in {"offline", "offline_unstable", "battery", "unstable"}:
+                if event.kind not in {"offline", "offline_unstable", "battery", "unstable", "battery_recovered", "online", "stable_recovery"}:
                     continue
                 if event.kind == "battery" and event.detail not in {"low", "empty"}:
                     continue
@@ -198,7 +198,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         any(m.get("area") == area_key for m in sensor.get("memberships", [])) or
                         (area_key == "system_sabotage" and sensor.get("sabotage") and sensor["sabotage"].get("enabled", True)))
                         for sensor in full_config.get("sensors", []))
-                    if belongs and any(action.when == notification_kind for action in area.spec.actions):
+                    action_kind = {"battery_recovered": "battery", "online": "offline", "stable_recovery": "unstable"}.get(notification_kind, notification_kind)
+                    if belongs and any(action.when == action_kind for action in area.spec.actions):
                         area._emit(f"diagnostic_{notification_kind}", event.source)
                 for key, area in engine.areas.items():
                     if (area.mode is None or area.reconciling or

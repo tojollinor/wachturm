@@ -115,6 +115,7 @@ def parse_specs(raw: Any) -> tuple[AreaSpec, ...]:
                 repeat_on_retrigger=_bool(action.get("repeat_on_retrigger", False), "repeat_on_retrigger"),
                 timed=_bool(action.get("timed", False), "action.timed"),
                 when=_string(action.get("when", "alarm"), "action.when"),
+                timing=None if "timing" not in action else _string(action["timing"], "action.timing"),
                 notification=action.get("notification", {}),
                 mode_keys=None if "mode_keys" not in action else tuple(_string(k,"action.mode_keys") for k in _array(action["mode_keys"],"action.mode_keys")),
             ))
