@@ -489,3 +489,11 @@ test('details retain both open and closed user choices and stay scoped to their 
  a.open=false;panel._captureDetails(root,'overview');a.open=true;panel._restoreDetails(root,'overview');assert.equal(a.open,false);
  a.open=true;panel._restoreDetails(root,'other');assert.equal(a.open,true);
 });
+
+
+test('new areas inherit mode-wide actions but retain existing restricted actions',()=>{
+  const {panel}=setup();
+  const global={key:'push',domain:'notify',service:'phone',data:{message:'Alarm'}};
+  panel._doc={schema:2,areas:[{key:'home',actions:[global]},{key:'system_sabotage',actions:[global,{key:'restricted'}]}]};
+  assert.deepEqual(plain(panel._defaultV2('areas').actions),[global]);
+});

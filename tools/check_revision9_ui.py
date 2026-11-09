@@ -72,7 +72,7 @@ def run():
         root.locator('[data-token-target=notification-tts-text][data-insert-token=sensor]').click()
         assert '{sensor}' in root.locator('[data-field=notification-tts-text]').input_value()
         assert root.locator('[data-field=notify-message]').input_value()=='{alarm_message} · {sensor} · {mode}'
-        root.locator('[data-field=test-action-mode]').select_option('night');root.locator('[data-field=test-action-area]').select_option('home')
+        root.locator('[data-field=test-action-mode]').select_option('night')
         root.locator('[data-action-test=start]').click()
         page.wait_for_function("document.querySelector('ha-alarmzentrale-panel')._runtime.simulation?.active")
         assert 'Test läuft' in root.locator('#action-test-status').inner_text()

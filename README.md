@@ -24,7 +24,7 @@ Die Bedienung erfolgt über eine eigene Oberfläche und eine passende Dashboard-
 | **Bereiche und Sensoren** | Bereiche wie Außenhaut, Erdgeschoss oder Garage anlegen und Sensoren direkt darin verwalten. Geräte, Entitäten und Sensortyp mit passenden Statussymbolen auswählen. Jeder Sensor gehört zu einem Bereich. |
 | **Modi** | Abwesend, Zuhause, Nacht und eigene Modi mit unterschiedlichem Sensorverhalten anlegen. |
 | **Sabotage** | Sabotagekontakte getrennt überwachen und je Sensor sowie Modus berücksichtigen. |
-| **Aktionen** | Sirenen, Licht, Schalter, Skripte und Benachrichtigungen nach Bereich, Modus und Ereignis ausführen. |
+| **Aktionen** | Sirenen, Licht, Schalter, Skripte und Benachrichtigungen nach Modus und Ereignis ausführen. |
 | **Bediengeräte** | Fernbedienungen, Tasterereignisse, Entitäten und Schalter mit Bedienhandlungen verbinden. |
 | **Benutzer und PIN** | Persönliche Rechte, Rollen und PIN-Regeln für Aktivieren, Deaktivieren, Stumm und Quittieren festlegen. |
 | **Diagnose** | Erreichbarkeit, Batterie, RSSI sowie Homematic Duty Cycle und Carrier Sense verfolgen. |
@@ -75,12 +75,14 @@ Der technische Ordnername bleibt `ha_alarmzentrale`. Das erhält auch bei besteh
 2. **Bereiche anlegen:** Erstelle unter **Bereiche** zum Beispiel Außenhaut oder Garage.
 3. **Sensoren im Bereich hinzufügen:** Öffne den Bereich und wähle **Sensor hinzufügen**. Wähle Gerät, Entitäten und Sensortyp; ergänze bei Bedarf Sabotage-, Batterie- und Verbindungsquellen. Jeder Sensor gehört genau einem regulären Bereich; ein Sabotagekontakt wird zusätzlich zentral überwacht.
 4. **Modi einrichten:** Ordne Bereiche zu, stelle Zeiten ein und wähle das Verhalten je Sensor. Modi können zunächst auch ohne Bereich angelegt werden.
-5. **Aktionen festlegen:** Wähle Empfänger oder Ausgänge, Ereignis, Zeitpunkt, Bereiche und Modi.
+5. **Aktionen festlegen:** Wähle Empfänger oder Ausgänge, Ereignis, Zeitpunkt und Modi.
 6. **Funktion prüfen:** Verwende den Sensortest unter Diagnose und den Aktionstest direkt im jeweiligen Aktionsdialog.
 
 **Speichern** im jeweiligen Dialog übernimmt die Änderung direkt. Konfigurationsänderungen sind möglich, wenn die Anlage deaktiviert, Alarme quittiert und laufende Aktionen abgeschlossen sind.
 
 Sensoren können über **Bearbeiten → Bereich** verschoben werden. Dabei gelten zunächst die Standardregeln des Zielbereichs; prüfe anschließend das Verhalten in den Modi. Beim Löschen eines Bereichs bleiben seine Sensoren unter **Ohne Bereich** erhalten. Frühere Mehrfachzuordnungen werden nicht automatisch gelöscht: Wähle beim Bearbeiten des Sensors den künftig einzigen Bereich.
+
+Aktionen werden über Modi zugeordnet. Eine zusätzliche Bereichsauswahl ist nicht erforderlich. Unter **Andere Home-Assistant-Aktion** wählst du die gewünschte HA-Aktion, ihre Zielentitäten und bei Bedarf zusätzliche Daten.
 
 ### Wann Aktionen ausgeführt werden
 
@@ -110,7 +112,7 @@ type: custom:ha-alarmzentrale-card
 entity: alarm_control_panel.wachturm
 ```
 
-Ersetze die Beispiel-Entität durch dein tatsächlich vorhandenes zentrales Panel. Wenn die automatische Bereitstellung in deinem Dashboard nicht greift, ergänze `/ha_alarmzentrale_assets/alarmzentrale-card.js?v=0.8.2` als JavaScript-Modul unter den Dashboard-Ressourcen.
+Ersetze die Beispiel-Entität durch dein tatsächlich vorhandenes zentrales Panel. Wenn die automatische Bereitstellung in deinem Dashboard nicht greift, ergänze `/ha_alarmzentrale_assets/alarmzentrale-card.js?v=0.8.3` als JavaScript-Modul unter den Dashboard-Ressourcen.
 
 Bei konfiguriertem PIN-Schutz öffnet sich das integrierte PIN-Pad. Blockierte Modi sind nicht aktivierbar. Im Alarmfall pulsieren Symbol und Kartenrahmen; Stummschalten lässt Auslöser und Alarmdauer sichtbar.
 

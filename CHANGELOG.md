@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.8.3 (noch nicht veröffentlicht)
+
+- Bereichsauswahl bei Aktionen und Aktionstests entfernt; Zuordnung erfolgt über Modi.
+- Modusweite Aktionen werden beim Anlegen neuer Bereiche berücksichtigt.
+- „Andere Home-Assistant-Aktion“ öffnet den Editor und bietet eine Auswahl der verfügbaren HA-Aktionen mit Zielentitäten und zusätzlichen Daten.
+
 ## 0.8.2 (noch nicht veröffentlicht)
 
 - Bereiche und Sensoren in einer gemeinsamen Verwaltung zusammengeführt; der separate Sensor-Tab entfällt.

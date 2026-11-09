@@ -1,4 +1,4 @@
-/** Wachturm 0.8.2: local admin panel; no outside JS dependencies.
+/** Wachturm 0.8.3: local admin panel; no outside JS dependencies.
  * All values originating from HA/configuration are HTML escaped before render.
  * Only administrators may call the server's mutation WebSocket endpoints.
  */
@@ -366,7 +366,7 @@ class HaAlarmzentralePanel extends HTMLElement {
     const dirty = "Änderungen werden im jeweiligen Dialog gespeichert";
     const locked = !this._safe;
     this.shadowRoot.innerHTML = this._css() + `<div class="wrap">
-      <header class="top"><div><div class="row flex-start"><button class="btn mobile-menu" aria-label="Seitenleiste öffnen"><ha-icon icon="mdi:menu"></ha-icon></button><img class="header-mode brand-logo" src="/ha_alarmzentrale_assets/wachturm-logo.png?v=0.8.2" alt="" aria-hidden="true" draggable="false"><div><h1>Wachturm</h1><div class="sub">${this._canAdmin?'Bedienung und Verwaltung':'Bedienung'} · <a class="project-link" href="https://github.com/tojollinor/wachturm" target="_blank" rel="noopener noreferrer" aria-label="Wachturm auf GitHub öffnen">v0.8.2 · GitHub</a></div></div></div></div>
+      <header class="top"><div><div class="row flex-start"><button class="btn mobile-menu" aria-label="Seitenleiste öffnen"><ha-icon icon="mdi:menu"></ha-icon></button><img class="header-mode brand-logo" src="/ha_alarmzentrale_assets/wachturm-logo.png?v=0.8.3" alt="" aria-hidden="true" draggable="false"><div><h1>Wachturm</h1><div class="sub">${this._canAdmin?'Bedienung und Verwaltung':'Bedienung'} · <a class="project-link" href="https://github.com/tojollinor/wachturm" target="_blank" rel="noopener noreferrer" aria-label="Wachturm auf GitHub öffnen">v0.8.3 · GitHub</a></div></div></div></div>
       <div class="message-slot" aria-live="polite"><div class="header-message-stack">${this._error?`<div class="notice error" role="alert">${E(this._error)}</div>`:""}
       ${this._notice?`<div id="success-notice" class="notice" role="status"><ha-icon icon="mdi:check-circle-outline"></ha-icon> ${E(this._notice)}</div>`:""}
       ${this._doc&&this._canAdmin?`<div id="configuration-lock" class="notice warning" ${locked?'':'hidden'}><ha-icon icon="mdi:lock-outline"></ha-icon>${this._runtime?.test_session?.active?'Sensortest aktiv: Alarmaktionen und Bedienung sind gesperrt.':'Änderungen gesperrt: Anlage deaktivieren und Alarme quittieren.'}</div>`:""}
@@ -380,7 +380,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
   }
 
   async _mountAlarmCard(){
-    if(!customElements.get('ha-alarmzentrale-card'))await import('./alarmzentrale-card.js?v=0.8.2');
+    if(!customElements.get('ha-alarmzentrale-card'))await import('./alarmzentrale-card.js?v=0.8.3');
     const host=this.shadowRoot.getElementById('fullscreen-alarm');if(!host||host.firstChild)return;
     const entity=Object.keys(this._hass.states||{}).find(id=>this._hass.states[id].attributes?.alarmzentrale_panel===true&&this._hass.states[id].attributes.integration==='ha_alarmzentrale');
     if(!entity){host.textContent='Zentrales Alarm-Panel noch nicht verfügbar.';return;}
@@ -727,7 +727,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
   _candidateForDialog() {
     const d=this._dialog,item=this._readDialog(),candidate=clone(this._doc);
     let list;
-    if(d.kind==='actions'&&candidate.schema===2){const targets=this._doc.areas.filter(a=>this._checked('action-area-'+a.key)).map(a=>a.key);if(!targets.length)throw Error('Mindestens einen Bereich für diese Aktion wählen.');for(const area of candidate.areas){area.actions=(area.actions||[]).filter(a=>a.key!==item.key);if(targets.includes(area.key))area.actions.push(clone(item));}return candidate;}
+    if(d.kind==='actions'&&candidate.schema===2){for(const area of candidate.areas){area.actions=(area.actions||[]).filter(a=>a.key!==item.key);area.actions.push(clone(item));}return candidate;}
     if(d.kind==='membership')candidate.sensors[d.index]=item;
     else {
       if(d.kind==='actions'){
@@ -1205,7 +1205,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
 
   _defaultV2(kind) {
     const id=`neu_${Math.random().toString(36).slice(2,10)}`;
-    if(kind==='areas')return {key:id,name:'Neuer Bereich',actions:[],ack_policy:'manual',recovery_fault_grace_seconds:30};
+    if(kind==='areas')return {key:id,name:'Neuer Bereich',actions:clone((this._listFor('actions')||[]).filter(action=>this._doc.areas.every(area=>(area.actions||[]).some(a=>a.key===action.key)))),ack_policy:'manual',recovery_fault_grace_seconds:30};
     if(kind==='modes')return {key:id,name:'Neuer Modus',area_keys:[SABOTAGE_AREA],standby_seconds:0,exit_delay_seconds:0,delay_on_mode_change:false,mute_after_seconds:1800,restart_timer_on_retrigger:true};
     if(kind==='zones')return {key:id,name:'Neuer Sensor',device_id:null,entities:[],memberships:[]};
     if(kind==='actions')return {key:id,name:'Neue Aktion',domain:'light',service:'turn_on',entity_ids:[],data:{},repeat_on_retrigger:false,timed:false};
@@ -1395,42 +1395,41 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
   _v2ActionDialog() {
     const d=this._dialog,item=d.item;
     if(!d.selectedTargets)d.selectedTargets=new Set(item.entity_ids||[]);
-    const domain=item.domain||'light',kind=['siren','light','switch','notify','script'].includes(domain)?domain:'custom';
+    const domain=item.domain||'light',kind=d.actionKind||((domain==='notify'||(['siren','light','switch','script'].includes(domain)&&item.service==='turn_on'))?domain:'custom');
     const svcs=this._catalog.services?.[domain]||{};
     const notify=Object.entries(this._catalog.services?.notify||{}).map(([key,value])=>[key,value.name||key]);
     if(domain==='notify'&&!notify.some(([key])=>key===item.service))notify.push([item.service||'notify',item.service||'notify']);
-    return this._v2Modal('Aktion bearbeiten',`${this._v2KeyField(d)}${this._input('name','Aktionsname',item.name)}${this._group('Gilt für Bereiche',this._doc.areas.map(a=>this._switch('action-area-'+a.key,a.name,(d.index===null?a.key===this._area:(a.actions||[]).some(x=>x.key===item.key)))).join(''))}${this._group('Gilt für Modi',this._doc.modes.map(m=>this._switch('action-mode-'+m.key,m.name,item.mode_keys==null||item.mode_keys.includes(m.key))).join(''))}
+    return this._v2Modal('Aktion bearbeiten',`${this._v2KeyField(d)}${this._input('name','Aktionsname',item.name)}${this._group('Gilt für Modi',this._doc.modes.map(m=>this._switch('action-mode-'+m.key,m.name,item.mode_keys==null||item.mode_keys.includes(m.key))).join(''))}
       <div class="form-grid">${this._select('action-kind','Was soll passieren?',kind,[['siren','Sirene einschalten'],['light','Licht einschalten'],['switch','Schalter einschalten'],['notify','Benachrichtigung senden'],['script','Home-Assistant-Skript starten'],['custom','Andere Home-Assistant-Aktion']])}
       ${this._select('action-when','Ereignis',item.when||'alarm',[['alarm','Alarm'],['armed','Scharfschalten'],['disarmed','Unscharfschalten'],['battery','Batteriewarnung'],['offline','Verbindungsverlust'],['unstable','Instabile Verbindung']])}${this._select('action-timing','Zeitpunkt',item.timing||(['armed','disarmed'].includes(item.when)?'after':'during'),[['before','Vor'],['during','Während'],['after','Nach']])}</div><p class="sub" id="action-timing-hint"></p>
       <div id="action-notification" ${kind==='notify'?'':'hidden'}>${this._select('notify-service','Empfänger / Benachrichtigungsdienst',item.service||'',notify)}${this._input('notify-title','Titel (optional)',item.data?.title||'')}${this._input('notify-message','Nachricht',item.data?.message||'')}<div class="actions token-buttons" style="margin-top:10px">${[['alarm_message','Alarmmeldung'],['sensor','Sensor'],['area','Bereich'],['mode','Modus'],['time','Zeitpunkt']].map(([key,label])=>`<button class="btn small" type="button" data-insert-token="${key}">+ ${label}</button>`).join('')}</div><div class="notification-options">${this._select('notification-platform','Benachrichtigungsprofil',item.notification?.platform||'standard',[['standard','Standard'],['ios','iOS Alarmmeldung'],['android','Android Alarmmeldung']])}${this._switch('notification-critical','Kritischer Alarmton',item.notification?.critical??true)}${this._switch('notification-persistent','Dauerhaft anzeigen (Android)',item.notification?.persistent??true)}${this._switch('notification-buttons','Aktionsbuttons mit Bestätigung',item.notification?.buttons??true)}${this._switch('notification-tts','Android-TTS zusätzlich sprechen',item.notification?.tts??false)}<div id="tts-text-editor"><label class="field">TTS-Ansagetext<textarea data-field="notification-tts-text" rows="3" maxlength="10000" placeholder="Leer = Benachrichtigungstext">${E(item.notification?.tts_text||'')}</textarea></label><div class="actions token-buttons">${[['alarm_message','Alarmmeldung'],['sensor','Sensor'],['area','Bereich'],['mode','Modus'],['time','Zeitpunkt']].map(([key,label])=>`<button class="btn small" type="button" data-insert-token="${key}" data-token-target="notification-tts-text">+ ${label}</button>`).join('')}</div></div>${this._switch('notification-tts-max','TTS vorübergehend mit maximaler Alarmlautstärke',item.notification?.tts_max??false)}${this._duration('notification-tts-repeat','TTS-Wiederholungsabstand (0 = einmalig)',item.notification?.tts_repeat_seconds||0)}${this._switch('notification-alarm-stream','Android-Alarmton wie im getesteten Skript',item.notification?.alarm_stream??false)}${this._switch('notification-screen-on','Bildschirm bei Alarm einschalten',item.notification?.screen_on??false)}${this._switch('notification-open-alarm','Vollbild-Alarmansicht automatisch öffnen',item.notification?.open_alarm??false)}<details class="sensor-advanced"><summary>Smartphone für kritische Alarme einrichten</summary><p><strong>Android:</strong> Bei aktiviertem Alarmton wie im Test wird der Kanal alarm_stream verwendet. Sonst nach der ersten kritischen Testmeldung den Kanal „Alarmzentrale Alarm“ unter Home Assistant → Benachrichtigungen öffnen. Hohe Wichtigkeit, Ton und „Nicht stören ignorieren“ erlauben. Auch die Ausnahmen im verwendeten Schlaf-/Arbeitsmodus prüfen. Auf Samsung gegebenenfalls zuerst Benachrichtigungskategorien für Apps aktivieren. Die Alarm-Lautstärke und die TTS-Ausgabe am Gerät prüfen. TTS kann alle 10 Sekunden bis 60 Minuten wiederholt werden; 0 bedeutet einmalig. Wiederholungen enden beim Stummschalten, Deaktivieren, Quittieren oder Ablauf der Alarmaktionsdauer. Bildschirm einschalten und automatisches Öffnen sind geräteabhängig; der Sperrbildschirm wird nicht entsperrt.</p><p><strong>iOS:</strong> Einstellungen → Mitteilungen → Home Assistant → Kritische Hinweise und Töne erlauben. Kritische Alarme kommen getrennt von der leisen, aktualisierbaren Statusmeldung. Auf die Meldung tippen öffnet den Alarm.</p><p class="sub">Eine Freigabe am Smartphone kann nicht aus Home Assistant erzwungen werden. Benachrichtigungen direkt in diesem Aktionsdialog testen.</p></details><p class="sub">Smartphone-Aktionen öffnen Wachturm zur Bestätigung. iOS erlaubt keine garantiert unentfernbare Meldung. Kritischer Ton benötigt passende Smartphone-Berechtigungen.</p></div></div>
+      <div id="action-custom-service" ${kind==='custom'?'':'hidden'}>${this._select('custom-service','Home-Assistant-Aktion',domain+'.'+item.service,[['','Aktion auswählen'],...Object.entries(this._catalog.services||{}).flatMap(([domain,services])=>Object.entries(services).map(([service,info])=>[domain+'.'+service,(info?.name||service)+' · '+domain+'.'+service]))])}</div>
       <div id="action-targets" ${kind==='notify'?'hidden':''}><h3>Zielgeräte / Entitäten</h3><div id="action-native-picker"></div><div id="action-target-fallback">${this._input('action-target-search','Entitäten suchen','','search')}<div class="entity-picker" id="action-entity-picker">${this._actionChoices()}</div></div>
       <details class="sensor-advanced"><summary>Entitäts-ID manuell eingeben</summary><div class="row flex-start">${this._input('manual-target','Zielentität','','text')}<button type="button" class="btn small" data-dialog-action="add-manual-target">Hinzufügen</button></div></details></div>
       <p id="action-preview" class="notice"></p>${this._actionTestMarkup()}
-      <details class="sensor-advanced" ${kind==='custom'?'open':''}><summary>Erweiterte Home-Assistant-Einstellungen</summary><div class="form-grid">${this._input('domain','Domain',domain)}<label class="field">Aktion<input data-field="service" list="ha-services" value="${E(item.service||'turn_on')}"><datalist id="ha-services">${Object.keys(svcs).map(key=>`<option value="${E(key)}"></option>`).join('')}</datalist></label></div>
+      <details id="action-advanced" class="sensor-advanced" ${kind==='custom'?'open':''}><summary>Erweiterte Home-Assistant-Einstellungen</summary><div class="form-grid">${this._input('domain','Domain',domain)}<label class="field">Aktion<input data-field="service" list="ha-services" value="${E(item.service||'turn_on')}"><datalist id="ha-services">${Object.keys(svcs).map(key=>`<option value="${E(key)}"></option>`).join('')}</datalist></label></div>
       <label class="field">Zusätzliche Daten (JSON)<textarea data-field="data" rows="4">${E(JSON.stringify(item.data||{},null,2))}</textarea></label></details>
       ${this._checkbox('repeat_on_retrigger','Bei erneutem Alarm wiederholen',item.repeat_on_retrigger)}${this._checkbox('timed','Nach Alarmaktionsdauer automatisch beenden',item.timed)}<p class="sub">Automatisches Beenden gilt nur für unterstützte Alarm-Ausgänge, die Wachturm selbst eingeschaltet hat.</p>`);
   }
   _actionTestMarkup(){
     const d=this._dialog,item=d.item;
-    return `<section class="action-test-panel"><h3>Aktion testen / Alarm simulieren</h3><p class="sub">Test mit den aktuellen Eingaben, ohne Speichern. Benachrichtigungen sind als TEST markiert. Gewählte Ausgänge und Skripte werden tatsächlich ausgeführt. Automatisches Testende nach 60 Sekunden; selbst eingeschaltete unterstützte Ausgänge werden wieder beendet.</p><div class="form-grid">${this._select('test-action-area','Testbereich',this._area||this._doc.areas[0]?.key,this._doc.areas.map(a=>[a.key,a.name]))}${this._select('test-action-mode','Testmodus',this._doc.modes.find(m=>(item.mode_keys==null||item.mode_keys.includes(m.key))&&m.area_keys?.includes(this._area))?.key||this._doc.modes[0]?.key,this._doc.modes.map(m=>[m.key,m.name]))}</div><div class="actions"><button type="button" class="btn" data-action-test="start">Testen / Simulieren</button><button type="button" class="btn" data-action-test="mute">Test stumm</button><button type="button" class="btn" data-action-test="stop">Test beenden</button></div><div role="status" id="action-test-status"></div></section>`;
+    return `<section class="action-test-panel"><h3>Aktion testen / Alarm simulieren</h3><p class="sub">Test mit den aktuellen Eingaben, ohne Speichern. Benachrichtigungen sind als TEST markiert. Gewählte Ausgänge und Skripte werden tatsächlich ausgeführt. Automatisches Testende nach 60 Sekunden; selbst eingeschaltete unterstützte Ausgänge werden wieder beendet.</p><div class="form-grid">${this._select('test-action-mode','Testmodus',this._doc.modes.find(m=>(item.mode_keys==null||item.mode_keys.includes(m.key))&&m.area_keys?.includes(this._area))?.key||this._doc.modes[0]?.key,this._doc.modes.map(m=>[m.key,m.name]))}</div><div class="actions"><button type="button" class="btn" data-action-test="start">Testen / Simulieren</button><button type="button" class="btn" data-action-test="mute">Test stumm</button><button type="button" class="btn" data-action-test="stop">Test beenden</button></div><div role="status" id="action-test-status"></div></section>`;
   }
   _actionTestFeedback(text,error=false){const node=this.shadowRoot.getElementById('action-test-status');if(node){node.textContent=text;node.className=error?'tone-error':'tone-good';}else{this._notice=text;if(error)this._error=text;this._render();}}
   async _startActionTest(){
     if(this._testingAction)return;this._testingAction=true;
     try{
-      const action=this._readDialog(),area=this._val('test-action-area'),mode=this._val('test-action-mode');
-      if(!this._checked('action-area-'+area))throw Error('Testbereich ist für diese Aktion nicht ausgewählt.');
+      const action=this._readDialog(),mode=this._val('test-action-mode'),area=this._doc.modes.find(m=>m.key===mode)?.area_keys?.find(k=>this._runtime?.areas_state?.some(a=>a.key===k))||this._doc.modes.find(m=>m.key===mode)?.area_keys?.[0];
+      if(!area)throw Error('Für diesen Testmodus ist noch keine Überwachung eingerichtet.');
       if(!action.mode_keys.includes(mode))throw Error('Testmodus ist für diese Aktion nicht ausgewählt.');
       const result=await this._hass.callWS({type:'ha_alarmzentrale/runtime/action_test',operation:'start',action,area,mode});
       this._runtime.simulation=result.simulation;this._actionTestFeedback('Test läuft · '+action.name+' → '+action.domain+'.'+action.service+' · Automatisches Ende nach 60 Sekunden.');
     }catch(e){this._actionTestFeedback(this._explain(e.message||e),true);}finally{this._testingAction=false;}
   }
   _syncActionTestChoices(){
-    const area=this._field('test-action-area'),mode=this._field('test-action-mode');if(!area||!mode)return;
-    const previous=area.value,areas=this._doc.areas.filter(a=>this._checked('action-area-'+a.key));
-    area.innerHTML=areas.map(a=>`<option value="${E(a.key)}">${E(a.name)}</option>`).join('');if(areas.some(a=>a.key===previous))area.value=previous;
-    const previousMode=mode.value,modes=this._doc.modes.filter(m=>this._checked('action-mode-'+m.key)&&m.area_keys?.includes(area.value));
-    mode.innerHTML=modes.map(m=>`<option value="${E(m.key)}">${E(m.name)}</option>`).join('');if(modes.some(m=>m.key===previousMode))mode.value=previousMode;
+    const mode=this._field('test-action-mode');if(!mode)return;
+    const previous=mode.value,modes=this._doc.modes.filter(m=>this._checked('action-mode-'+m.key));
+    mode.innerHTML=modes.map(m=>`<option value="${E(m.key)}">${E(m.name)}</option>`).join('');if(modes.some(m=>m.key===previous))mode.value=previous;
   }
   async _controlActionTest(operation,token){
     if(this._testingAction)return;this._testingAction=true;
@@ -1445,6 +1444,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
   }
   _updateActionControls() {
     const kind=this._val('action-kind'),when=this._val('action-when');let platform=this._val('notification-platform');
+    const custom=this.shadowRoot.getElementById('action-custom-service');if(custom)custom.hidden=kind!=='custom';
     const timingField=this._field('action-timing'),allowed=this._actionTimings(when);
     if(timingField){for(const option of timingField.options)option.disabled=!allowed.includes(option.value);if(!allowed.includes(timingField.value))timingField.value=['armed','disarmed'].includes(when)?'after':'during';}
     const timing=timingField?.value||(['armed','disarmed'].includes(when)?'after':'during');
@@ -1477,7 +1477,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     }catch{/* Searchable fallback stays available. */}
   }
   _actionChoices() {
-    const d=this._dialog,domain=d.item.domain||'',search=(d.search||'').toLocaleLowerCase('de');
+    const d=this._dialog,domain=this._val('action-kind')==='custom'?'':d.item.domain||'',search=(d.search||'').toLocaleLowerCase('de');
     const ids=this._entityCandidates().filter(id=>(!domain||id.startsWith(domain+'.')||d.selectedTargets.has(id))
       && (!search||id.includes(search)||this._entityLabel(id).toLocaleLowerCase('de').includes(search)));
     const shown=ids.slice(0,120);
@@ -1840,7 +1840,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     }
     if(this._dialog?.kind==='actions'){
       this._syncActionTestChoices();
-      this.shadowRoot.querySelectorAll('[data-field^=action-area-],[data-field^=action-mode-],[data-field=test-action-area]').forEach(el=>el.addEventListener('change',()=>this._syncActionTestChoices()));
+      this.shadowRoot.querySelectorAll('[data-field^=action-mode-]').forEach(el=>el.addEventListener('change',()=>this._syncActionTestChoices()));
       this.shadowRoot.querySelector('[data-action-test=start]')?.addEventListener('click',()=>this._startActionTest());
       this.shadowRoot.querySelector('[data-action-test=stop]')?.addEventListener('click',()=>this._controlActionTest('stop'));
       this.shadowRoot.querySelector('[data-action-test=mute]')?.addEventListener('click',()=>this._controlActionTest('mute'));
@@ -1848,7 +1848,8 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
       this._wireV2TargetChoices();void this._mountActionSelector();this._updateActionControls();
       this._field('notification-platform')?.addEventListener('change',()=>this._updateActionControls());
       this._field('notification-tts')?.addEventListener('change',()=>this._updateActionControls());
-      this._field('action-kind')?.addEventListener('change',()=>{const kind=this._val('action-kind');if(kind!=='custom'){this._field('domain').value=kind;this._field('service').value=kind==='notify'?(this._val('notify-service')||'notify'):'turn_on';this._dialog.item.domain=kind;this._dialog.selectedTargets.clear();this._refreshActionChoices();}this._updateActionControls();});
+      this._field('action-kind')?.addEventListener('change',()=>{const kind=this._val('action-kind');this._dialog.actionKind=kind;if(kind!=='custom'){this._field('domain').value=kind;this._field('service').value=kind==='notify'?(this._val('notify-service')||'notify'):'turn_on';this._dialog.item.domain=kind;this._dialog.selectedTargets.clear();this._refreshActionChoices();}else{const advanced=this.shadowRoot.getElementById('action-advanced');if(advanced)advanced.open=true;this._refreshActionChoices();}this._updateActionControls();});
+      this._field('custom-service')?.addEventListener('change',()=>{const value=this._val('custom-service');if(!value)return;const [domain,service]=value.split('.');this._field('domain').value=domain;this._field('service').value=service;this._dialog.item.domain=domain;this._refreshActionChoices();this._updateActionControls();});
       for(const key of ['action-when','action-timing','name','notify-message','notify-service','notification-platform'])this._field(key)?.addEventListener('input',()=>this._updateActionControls());
       this._field('domain')?.addEventListener('change',()=>{
         this._dialog.item.domain=this._val('domain');

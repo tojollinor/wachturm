@@ -219,6 +219,26 @@ def run():
         assert not root.locator('#connection-signal-settings').is_visible()
         page.screenshot(path=str(ROOT / "qa/sensor-dialog.png"), full_page=True)
         root.get_by_role("button", name="Abbrechen", exact=True).click()
+        # Custom HA actions expose a service chooser and persist its real service.
+        root.get_by_role("button", name="Aktionen", exact=True).click()
+        root.locator('[data-action="add"]').click()
+        assert root.locator('[data-field^="action-area-"]').count() == 0
+        assert root.locator('[data-field="test-action-area"]').count() == 0
+        root.locator('[data-field="name"]').fill('Eigenes Skript')
+        root.locator('[data-field="action-kind"]').select_option('custom')
+        assert root.locator('#action-advanced').evaluate('(el)=>el.open')
+        assert root.locator('#action-custom-service').is_visible()
+        root.locator('[data-field="custom-service"]').select_option('script.turn_on')
+        assert root.locator('[data-field="domain"]').input_value() == 'script'
+        assert root.locator('[data-field="service"]').input_value() == 'turn_on'
+        root.locator('#action-targets summary').click()
+        root.locator('[data-field="manual-target"]').fill('script.alarm')
+        root.locator('[data-dialog-action="add-manual-target"]').click()
+        root.locator('[data-field="data"]').fill('{"variables":{"message":"Alarm"}}')
+        root.get_by_role("button", name="Speichern", exact=True).click()
+        page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
+        custom = json.loads(backend.raw)
+        assert all(any(a['name']=='Eigenes Skript' and a['domain']=='script' and a['service']=='turn_on' and a['entity_ids']==['script.alarm'] for a in area['actions']) for area in custom['areas'])
         # Save a notification through the friendly action editor.
         root.get_by_role("button", name="Aktionen", exact=True).click()
         root.locator('[data-action="add"]').click()
@@ -247,7 +267,7 @@ def run():
         root.locator('[data-field="notify-message"]').fill("Bitte Batterie prüfen")
         root.get_by_role("button", name="Speichern", exact=True).click()
         page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
-        action = json.loads(backend.raw)["areas"][0]["actions"][0]
+        action = next(a for a in json.loads(backend.raw)["areas"][0]["actions"] if a["name"]=="Batteriewarnung Telefon")
         assert action["when"] == "battery" and action["domain"] == "notify" and action["timing"] == "after"
         # A role template writes explicit permissions; a HA user can be activated.
         root.get_by_role("button", name="Rollen", exact=True).click()
