@@ -24,9 +24,12 @@ def run():
         page.evaluate("()=>{const c=document.createElement('ha-alarmzentrale-card');c.setConfig({entity:'alarm_control_panel.zentrale'});c.hass=window.hassMock;document.querySelector('#card').append(c);}")
         card=page.locator('ha-alarmzentrale-card');page.wait_for_function("document.querySelector('ha-alarmzentrale-card')._view")
         assert card.locator('a').count()==0
-        assert card.locator('h2').evaluate('el=>getComputedStyle(el).fontSize')=='18px'
-        assert card.locator('.alarm-symbol').evaluate('el=>getComputedStyle(el).getPropertyValue("--mdc-icon-size").trim()')=='36px'
+        assert card.locator('h2').evaluate('el=>getComputedStyle(el).fontSize')=='16px'
+        assert card.locator('.alarm-symbol').evaluate('el=>getComputedStyle(el).getPropertyValue("--mdc-icon-size").trim()')=='30px'
         assert card.locator('.alarm-symbol').get_attribute('icon')=='mdi:shield-off-outline'
+        assert card.locator('ha-card').evaluate('el=>getComputedStyle(el).paddingTop')=='10px'
+        assert card.locator('.alarm-symbol').bounding_box()['x']-card.locator('.title>div').bounding_box()['x']-card.locator('.title>div').bounding_box()['width'] < 15
+        page.screenshot(path=str(ROOT/'qa/card-compact-0.8.5.png'),full_page=True)
         detail=card.locator('[data-detail-key="readiness"]');detail.locator('summary').click()
         await_message="document.querySelector('ha-alarmzentrale-card').load()"
         page.evaluate(await_message);page.wait_for_timeout(100)

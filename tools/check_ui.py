@@ -225,10 +225,17 @@ def run():
         assert root.locator('[data-field^="action-area-"]').count() == 0
         assert root.locator('[data-field="test-action-area"]').count() == 0
         root.locator('[data-field="name"]').fill('Eigenes Skript')
-        root.locator('[data-field="action-kind"]').select_option('custom')
-        assert root.locator('#action-advanced').evaluate('(el)=>el.open')
-        assert root.locator('#action-custom-service').is_visible()
-        root.locator('[data-field="custom-service"]').select_option('script.turn_on')
+        root.locator('#action-service-picker > summary').click()
+        search = root.locator('#action-service-search')
+        assert root.locator('#action-service-options').evaluate("el=>{const names=[...el.querySelectorAll('strong')].map(x=>x.textContent);return names.every((x,i)=>!i||names[i-1].localeCompare(x,'de',{sensitivity:'base',numeric:true})<=0)}")
+        search.fill('script.turn_on')
+        page.evaluate("document.querySelector('ha-alarmzentrale-panel')._pollRuntime()")
+        assert search.input_value() == 'script.turn_on'
+        assert root.locator('#action-service-picker').evaluate('(el)=>el.open')
+        page.screenshot(path=str(ROOT/'qa/action-service-search-0.8.5.png'),full_page=True)
+        search.press('Enter')
+        assert root.locator('[data-field="action-kind"]').input_value() == 'script'
+        root.locator('#action-advanced > summary').click()
         assert root.locator('[data-field="domain"]').input_value() == 'script'
         assert root.locator('[data-field="service"]').input_value() == 'turn_on'
         root.locator('#action-targets summary').click()
@@ -243,7 +250,9 @@ def run():
         root.get_by_role("button", name="Aktionen", exact=True).click()
         root.locator('[data-action="add"]').click()
         root.locator('[data-field="name"]').fill("Batteriewarnung Telefon")
-        root.locator('[data-field="action-kind"]').select_option("notify")
+        root.locator('#action-service-picker > summary').click()
+        root.locator('#action-service-search').fill('notify.mobile_app_telefon')
+        root.locator('[data-ha-service="notify.mobile_app_telefon"]').click()
         when = root.locator('[data-field="action-when"]')
         timing = root.locator('[data-field="action-timing"]')
         when.select_option("armed")
@@ -330,6 +339,8 @@ def run():
         page.wait_for_timeout(150)
         groups = root.locator('.history-group')
         assert groups.count() >= 2
+        assert root.locator('.history-entry').first.evaluate("el=>getComputedStyle(el).borderTopWidth")=='1px'
+        assert root.locator('.history-group').first.evaluate("el=>getComputedStyle(el).borderTopWidth")=='1px'
         assert not groups.first.evaluate("el=>el.open")
         groups.first.locator('summary').click()
         assert groups.first.locator('.list-item').count() >= 4
@@ -338,11 +349,16 @@ def run():
         page.screenshot(path=str(ROOT / "qa/history-desktop.png"), full_page=True)
         root.get_by_role("button", name="Bereiche", exact=True).click()
         root.locator('[data-area-key="system_sabotage"]').evaluate('(el)=>el.open=true')
-        root.locator('[data-area-key="system_sabotage"] [data-action="edit"]').click()
-        assert root.locator('[data-field="area-sabotage-0"]').is_checked()
-        root.locator('[data-field="area-sabotage-0"]').uncheck()
-        root.get_by_role("button", name="Speichern", exact=True).click()
-        page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
+        switch = root.locator('[data-sabotage-toggle="0"]')
+        assert switch.is_checked()
+        before = json.loads(backend.raw)['sensors'][0]['sabotage'].copy()
+        backend.fail_next = True
+        switch.uncheck()
+        page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._busy")
+        assert switch.is_checked()
+        assert json.loads(backend.raw)['sensors'][0]['sabotage'] == before
+        switch.uncheck()
+        page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._busy")
         assert json.loads(backend.raw)["sensors"][0]["sabotage"]["enabled"] is False
         root.get_by_role("button", name="Bereiche", exact=True).click()
         root.locator('[data-area-key="home"]').evaluate('(el)=>el.open=true')

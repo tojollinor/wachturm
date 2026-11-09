@@ -497,3 +497,31 @@ test('new areas inherit mode-wide actions but retain existing restricted actions
   panel._doc={schema:2,areas:[{key:'home',actions:[global]},{key:'system_sabotage',actions:[global,{key:'restricted'}]}]};
   assert.deepEqual(plain(panel._defaultV2('areas').actions),[global]);
 });
+
+
+test('HA service picker sorts names A-Z, searches IDs and escapes service labels',()=>{
+  const {panel}=setup();panel._catalog.services={z:{z:{name:'Zebra'}},a:{b:{name:'Alpha'},c:{name:'<img src=x>'}}};
+  panel._dialog={item:{domain:'a',service:'b'}};
+  const entries=plain(panel._actionServiceEntries());
+  assert.ok(entries.findIndex(e=>e.name==='Alpha')<entries.findIndex(e=>e.name==='Zebra'));
+  assert.match(panel._actionServiceOptions('a.b'),/data-ha-service="a.b"/);
+  assert.doesNotMatch(panel._actionServiceOptions('a.b'),/Zebra/);
+  assert.match(panel._actionServiceOptions('a.c'),/&lt;img src=x&gt;/);
+});
+
+test('history fault observations use a warning instead of a successful outcome',()=>{
+  const {panel}=setup();panel._doc={areas:[{key:'home',name:'Home'}],users:[],bindings:[]};panel._haUsers=[];panel._auditFilter={};panel._audit=[];
+  panel._statuses=[{key:'home',events:[{at:1794139200,kind:'sensor_fault',info:'Door'}]}];
+  const html=panel._sectionAudit();
+  assert.match(html,/history-entry/);assert.match(html,/Warnung/);assert.match(html,/tone-warning/);
+  assert.doesNotMatch(html,/Erfolgreich/);assert.doesNotMatch(html,/System · System/);
+});
+
+test('direct sabotage switch preserves contact configuration and rejects locked changes',async()=>{
+  const {panel}=setup();const sabotage={entity_id:'binary_sensor.tamper',active_states:['on'],normal_states:['off']};
+  panel._doc={sensors:[{key:'door',name:'Door',entities:[],memberships:[],sabotage}]};panel._safe=true;panel._canAdmin=true;
+  let saved;panel._persistCandidate=async doc=>{saved=doc;};
+  const input={dataset:{sabotageToggle:'0'},checked:false};await panel._toggleSabotage(input);
+  assert.deepEqual(plain(saved.sensors[0].sabotage),{...sabotage,enabled:false});assert.equal(panel._doc.sensors[0].sabotage.enabled,undefined);
+  saved=null;panel._safe=false;await panel._toggleSabotage(input);assert.equal(saved,null);assert.equal(input.checked,true);
+});

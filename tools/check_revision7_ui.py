@@ -33,7 +33,8 @@ def run():
         root.get_by_role('button',name='Aktionen',exact=True).click()
         assert root.locator('.action-card').count()>0
         root.locator('.action-card [data-action=edit]').first.click()
-        root.locator('[data-field=action-kind]').select_option('notify')
+        root.locator('#action-service-picker > summary').click()
+        root.locator('[data-ha-service="notify.mobile_app_phone"]').click()
         root.locator('[data-field=notification-platform]').select_option('android')
         assert root.locator('[data-field=notification-screen-on]').is_visible()
         assert root.locator('[data-duration=notification-tts-repeat]').is_visible()

@@ -1,5 +1,14 @@
 # Änderungen
 
+## 0.8.5
+
+- Deutlich kompaktere Dashboard-Card mit natürlicher Höhe und näher am Text platziertem Statussymbol.
+- Eine suchbare, alphabetische HA-Aktionsauswahl ersetzt die bisherigen Kategorien und die zweite Dienstliste.
+- Einheitlich umrahmte Historieneinträge mit konsistenter Ausrichtung, Zeitstempeln und passenden Statusfarben.
+- Verfügbarkeitswarnungen werden nicht mehr als erfolgreich dargestellt; doppelte Systemangaben entfallen.
+- Sabotageüberwachung direkt am Sensor schalten, mit sicherem Zurücksetzen bei Speicherfehlern.
+- Versionierte Updates als GitHub-Release nach erfolgreichen Prüfungen auf main.
+
 ## 0.8.4 (noch nicht veröffentlicht)
 
 - Feste Standardrolle Admin mit allen Bedienrechten für bestehende und zukünftige Bereiche einschließlich Sabotage.

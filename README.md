@@ -82,7 +82,7 @@ Der technische Ordnername bleibt `ha_alarmzentrale`. Das erhält auch bei besteh
 
 Sensoren können über **Bearbeiten → Bereich** verschoben werden. Dabei gelten zunächst die Standardregeln des Zielbereichs; prüfe anschließend das Verhalten in den Modi. Beim Löschen eines Bereichs bleiben seine Sensoren unter **Ohne Bereich** erhalten. Frühere Mehrfachzuordnungen werden nicht automatisch gelöscht: Wähle beim Bearbeiten des Sensors den künftig einzigen Bereich.
 
-Aktionen werden über Modi zugeordnet. Eine zusätzliche Bereichsauswahl ist nicht erforderlich. Unter **Andere Home-Assistant-Aktion** wählst du die gewünschte HA-Aktion, ihre Zielentitäten und bei Bedarf zusätzliche Daten.
+Aktionen werden über Modi zugeordnet. Eine zusätzliche Bereichsauswahl ist nicht erforderlich. Unter **Was soll passieren?** wählst du die gewünschte HA-Aktion aus der alphabetischen Liste mit Suche nach Name oder technischer Kennung. Ergänze anschließend Zielentitäten und bei Bedarf zusätzliche Daten.
 
 ### Wann Aktionen ausgeführt werden
 
@@ -112,7 +112,7 @@ type: custom:ha-alarmzentrale-card
 entity: alarm_control_panel.wachturm
 ```
 
-Ersetze die Beispiel-Entität durch dein tatsächlich vorhandenes zentrales Panel. Wenn die automatische Bereitstellung in deinem Dashboard nicht greift, ergänze `/ha_alarmzentrale_assets/alarmzentrale-card.js?v=0.8.4` als JavaScript-Modul unter den Dashboard-Ressourcen.
+Ersetze die Beispiel-Entität durch dein tatsächlich vorhandenes zentrales Panel. Wenn die automatische Bereitstellung in deinem Dashboard nicht greift, ergänze `/ha_alarmzentrale_assets/alarmzentrale-card.js?v=0.8.5` als JavaScript-Modul unter den Dashboard-Ressourcen.
 
 Bei konfiguriertem PIN-Schutz öffnet sich das integrierte PIN-Pad. Blockierte Modi sind nicht aktivierbar. Im Alarmfall pulsieren Symbol und Kartenrahmen; Stummschalten lässt Auslöser und Alarmdauer sichtbar.
 
@@ -149,6 +149,8 @@ Homematic-Geräte werden über ihre vorhandene Home-Assistant-Anbindung eingebun
 Wachturm kann Öffnungskontakte, Sabotage, `LOW_BAT`, Spannung, Erreichbarkeit und RSSI verwenden, soweit diese Werte als Entitäten oder Attribute vorliegen. Duty Cycle und Carrier Sense lassen sich mit Verlaufsgrafiken anzeigen. Fernbedienungen und Taster werden über ihre konfigurierten Ereignisse zugeordnet.
 
 Für binäre Diagnosewerte wird die Bedeutung ausdrücklich zugeordnet. Unbekannte oder nicht verfügbare Werte werden entsprechend angezeigt. Eine Erreichbarkeitsprüfung kann die Verfügbarkeit einer Referenzentität oder einen RSSI-Schwellwert verwenden.
+
+Die Sabotageüberwachung kann direkt am jeweiligen Sensor im Sabotagebereich ein- und ausgeschaltet werden. Kontakt und Zuordnung bleiben erhalten.
 
 ## Updates
 
