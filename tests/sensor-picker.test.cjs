@@ -360,15 +360,15 @@ test('RSSI thresholds accept negative fractional numbers without the nonnegative
 });
 
 
-test('area editor shows a single entity sensor only once and saves its membership',()=>{
+test('area editor leaves sensor assignment to the area-scoped sensor dialog',()=>{
   const {panel}=setup();
   panel._doc={sensors:[{key:'door',name:'Haustür',entities:[{key:'opening',entity_id:'binary_sensor.door'}],memberships:[]}]};
   panel._dialog={kind:'areas',index:null,item:{key:'home',name:'Wohnung'}};
   const html=panel._v2AreaDialog();
-  assert.match(html,/area-sensor-0/);assert.doesNotMatch(html,/area-entity-0-0/);
+  assert.doesNotMatch(html,/area-sensor-0/);assert.doesNotMatch(html,/area-entity-0-0/);
   panel._checked=key=>key==='area-sensor-0';
   const candidate=plain(panel._doc);panel._applyAreaMembers(candidate,{key:'home'});
-  assert.deepEqual(candidate.sensors[0].memberships[0].entity_keys,['opening']);
+  assert.deepEqual(candidate.sensors[0].memberships,[]);
 });
 
 test('newly assigned area enables sources and mode editor offers initial-state policies',()=>{

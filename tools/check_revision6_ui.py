@@ -63,8 +63,9 @@ def run():
         assert ready.evaluate('el=>el.open');assert abs(root.locator('.tabs').bounding_box()['y']-y)<1
         assert root.locator('.message-slot').bounding_box()['y']<root.locator('.top').bounding_box()['y']+root.locator('.top').bounding_box()['height']
         assert root.locator('.readiness-mode').count()==2
-        root.get_by_role('button',name='Sensoren',exact=True).click()
-        row=root.locator('.sensor-main-row').first
+        root.get_by_role('button',name='Bereiche',exact=True).click()
+        root.locator('[data-area-key=home]>summary').click()
+        row=root.locator('[data-area-key=home] .sensor-main-row').first
         assert abs(row.locator('.sensor-title').bounding_box()['y']-row.locator('.entity-statuses').bounding_box()['y'])<12
         assert root.locator('.sensor-card .list-description').count()==0
         page.screenshot(path=str(ROOT/'qa/sensor-inline-dev6.png'),full_page=True)

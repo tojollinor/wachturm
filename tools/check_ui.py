@@ -149,7 +149,7 @@ def run():
         root = page.locator("ha-alarmzentrale-panel")
         assert root.get_by_role("button", name="Konfiguration speichern", exact=True).count() == 0
         page.screenshot(path=str(ROOT / "qa/overview-desktop.png"), full_page=True)
-        for label in ("Bereiche", "Modi", "Sensoren", "Aktionen", "Diagnose", "Benutzer", "Rollen", "Bediengeräte", "Bedienhistorie"):
+        for label in ("Bereiche", "Modi", "Aktionen", "Diagnose", "Benutzer", "Rollen", "Bediengeräte", "Bedienhistorie"):
             root.get_by_role("button", name=label, exact=True).click()
             page.wait_for_timeout(80)
             assert page.evaluate("document.documentElement.scrollWidth<=window.innerWidth"), label
@@ -171,10 +171,35 @@ def run():
         root.get_by_role("button", name="Bereiche", exact=True).click()
         root.locator('[data-action="add"]').click()
         root.locator('[data-field="name"]').fill("Eingang")
-        root.locator('[data-field="area-sensor-0"]').check()
         root.get_by_role("button", name="Speichern", exact=True).click()
         page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
         assert any(a["name"] == "Eingang" for a in json.loads(backend.raw)["areas"])
+        assert root.get_by_role("button", name="Sensoren", exact=True).count() == 0
+        entrance = next(a['key'] for a in json.loads(backend.raw)['areas'] if a['name']=='Eingang')
+        group = root.locator('[data-area-key="'+entrance+'"]')
+        group.locator('summary').first.click()
+        group.locator('[data-action="sensor-add"]').click()
+        assert root.locator('[data-field="sensor-area"]').input_value() == entrance
+        root.locator('[data-field="name"]').fill('Zusatzkontakt')
+        root.locator('#sensor-native-picker select').select_option(['binary_sensor.battery'])
+        root.get_by_role('button', name='Speichern', exact=True).click()
+        page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
+        created = next(s for s in json.loads(backend.raw)['sensors'] if s['name']=='Zusatzkontakt')
+        assert [m['area'] for m in created['memberships']] == [entrance]
+        group.locator('[data-action="sensor-edit"]').click()
+        root.locator('[data-field="sensor-area"]').select_option('')
+        root.get_by_role('button', name='Speichern', exact=True).click()
+        assert 'genau einen Bereich' in root.locator('#form-error').inner_text()
+        assert next(s for s in json.loads(backend.raw)['sensors'] if s['key']==created['key'])['memberships'][0]['area']==entrance
+        root.locator('[data-field="sensor-area"]').select_option('home')
+        root.get_by_role('button', name='Speichern', exact=True).click()
+        page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._busy")
+        assert root.locator('#form-error').count()==0 or root.locator('#form-error').is_hidden(),root.locator('#form-error').inner_text()
+        page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
+        moved = next(s for s in json.loads(backend.raw)['sensors'] if s['key']==created['key'])
+        assert [m['area'] for m in moved['memberships']] == ['home']
+        assert group.locator('[data-sensor-key="'+created['key']+'"]').count() == 0
+
         root.get_by_role("button", name="Modi", exact=True).click()
         root.locator('[data-action="edit"]').first.click()
         root.locator('[data-field="name"]').fill("Eingabe bleibt erhalten")
@@ -185,9 +210,10 @@ def run():
         assert root.locator('#form-error').is_visible()
         assert json.loads(backend.raw)["modes"][0]["name"] == "Nacht"
         root.get_by_role("button", name="Abbrechen", exact=True).click()
-        root.get_by_role("button", name="Sensoren", exact=True).click()
+        root.get_by_role("button", name="Bereiche", exact=True).click()
+        root.locator('[data-area-key="home"]').evaluate('(el)=>el.open=true')
         page.screenshot(path=str(ROOT / "qa/sensors-desktop.png"), full_page=True)
-        root.locator('[data-action="edit"]').first.click()
+        root.locator('[data-area-key="home"] [data-action="sensor-edit"]').first.click()
         root.get_by_text('Verbindung und Funkdiagnose (optional)', exact=True).click()
         assert not root.locator('#connection-rssi-sources').is_visible()
         assert not root.locator('#connection-signal-settings').is_visible()
@@ -260,10 +286,11 @@ def run():
         page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._busy")
         assert len(json.loads(backend.raw)["diagnostics"]["radio_interfaces"]) == 1
         page.set_viewport_size({"width": 390, "height": 844})
-        for label in ("Übersicht", "Bereiche", "Modi", "Sensoren", "Aktionen", "Diagnose", "Benutzer", "Rollen", "Bediengeräte", "Bedienhistorie"):
+        for label in ("Übersicht", "Bereiche", "Modi", "Aktionen", "Diagnose", "Benutzer", "Rollen", "Bediengeräte", "Bedienhistorie"):
             root.get_by_role("button", name=label, exact=True).click()
             assert page.evaluate("document.documentElement.scrollWidth<=window.innerWidth"), "Mobile " + label
-        root.get_by_role("button", name="Sensoren", exact=True).click()
+        root.get_by_role("button", name="Bereiche", exact=True).click()
+        root.locator('[data-area-key="home"]').evaluate('(el)=>el.open=true')
         page.screenshot(path=str(ROOT / "qa/sensors-mobile.png"), full_page=True)
         root.get_by_role("button", name="Übersicht", exact=True).click()
         root.locator('[data-runtime-mode="night"]').click()
@@ -288,14 +315,16 @@ def run():
         page.set_viewport_size({"width":1180,"height":1000})
         page.screenshot(path=str(ROOT / "qa/history-desktop.png"), full_page=True)
         root.get_by_role("button", name="Bereiche", exact=True).click()
-        root.locator('[data-action="edit"]').first.click()
+        root.locator('[data-area-key="system_sabotage"]').evaluate('(el)=>el.open=true')
+        root.locator('[data-area-key="system_sabotage"] [data-action="edit"]').click()
         assert root.locator('[data-field="area-sabotage-0"]').is_checked()
         root.locator('[data-field="area-sabotage-0"]').uncheck()
         root.get_by_role("button", name="Speichern", exact=True).click()
         page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
         assert json.loads(backend.raw)["sensors"][0]["sabotage"]["enabled"] is False
-        root.get_by_role("button", name="Sensoren", exact=True).click()
-        root.locator('[data-action="edit"]').first.click()
+        root.get_by_role("button", name="Bereiche", exact=True).click()
+        root.locator('[data-area-key="home"]').evaluate('(el)=>el.open=true')
+        root.locator('[data-area-key="home"] [data-action="sensor-edit"]').first.click()
         assert root.locator('[data-field="sabotage-enabled"]').count() == 0
         root.get_by_role("button", name="Speichern", exact=True).click()
         page.wait_for_function("!document.querySelector('ha-alarmzentrale-panel')._dialog && !document.querySelector('ha-alarmzentrale-panel')._busy")
@@ -307,7 +336,7 @@ def run():
         assert root.get_by_role("button", name="Rollen", exact=True).count() == 0
         assert root.locator('[data-runtime-operation="disarm"]').count() > 0
         browser.close()
-    print("Browser checks passed: 10 tabs desktop/mobile, direct save, backend validation, failed-save retention, disabled diagnostics, authorized shared mode, role/user/action/radio/device saves, non-admin view.")
+    print("Browser checks passed: 9 tabs desktop/mobile, direct save, backend validation, failed-save retention, disabled diagnostics, authorized shared mode, role/user/action/radio/device saves, non-admin view.")
 
 
 if __name__ == "__main__":

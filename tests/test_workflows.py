@@ -162,10 +162,11 @@ class WorkflowTests(unittest.TestCase):
         candidate["sensors"][0]["memberships"].append({"area": "other", "entity_keys": ["opening"],
                                                        "mode_rules": {"night": {"behavior": "standby"}, "away": {"behavior": "standby"}}})
         serialized = json.dumps(raw)
-        with self.assertRaisesRegex(editor.EditorError, "Widersprüchliche"):
+        with self.assertRaisesRegex(editor.EditorError, "Nur ein Bereich"):
             editor.prepare_configuration(serialized, candidate, editor.revision_of(serialized))
         candidate["sensors"][0]["memberships"][-1]["mode_rules"]["night"]["behavior"] = "instant"
-        editor.prepare_configuration(serialized, candidate, editor.revision_of(serialized))
+        with self.assertRaisesRegex(editor.EditorError, "Nur ein Bereich"):
+            editor.prepare_configuration(serialized, candidate, editor.revision_of(serialized))
 
     def test_configuration_summary_contains_names_not_action_data(self):
         raw = fixture()

@@ -1,5 +1,13 @@
 # Änderungen
 
+## 0.8.2 (noch nicht veröffentlicht)
+
+- Bereiche und Sensoren in einer gemeinsamen Verwaltung zusammengeführt; der separate Sensor-Tab entfällt.
+- Sensoren direkt im Bereich hinzufügen, bearbeiten, löschen und in einen anderen Bereich verschieben.
+- Nur eine reguläre Bereichszuordnung pro Sensor; Sabotage bleibt zusätzlich zentral überwacht.
+- Vorhandene Mehrfachzuordnungen bleiben bis zur ausdrücklichen Neuzuordnung erhalten.
+- Beim Löschen eines Bereichs bleiben die Sensoren zur Neuzuordnung erhalten.
+
 ## 0.8.1 (noch nicht veröffentlicht)
 
 - Kompaktere Statusanzeige und Dashboard-Card mit zustandsabhängigen Symbolen; das Logo bleibt im Verwaltungskopf und bei der Integration.

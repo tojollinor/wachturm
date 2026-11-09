@@ -106,6 +106,21 @@ def prepare_configuration(current_raw: str, candidate: dict, expected_revision: 
         if len(rendered.encode("utf-8")) > MAX_CONFIG_BYTES:
             raise EditorError("Konfiguration überschreitet das Größenlimit")
         parse_configuration_json(rendered)
+        if new.get("schema") == 2:
+            prior_sensors = {s["key"]: s for s in current.get("sensors", [])}
+            area_keys = {a["key"] for a in new.get("areas", [])}
+            for sensor in new.get("sensors", []):
+                links = sensor.get("memberships", [])
+                prior = prior_sensors.get(sensor["key"], {})
+                prior_links = prior.get("memberships", [])
+                # Existing installations remain operational until their explicit
+                # reassignment. Never choose an area and discard rules on load.
+                if len(links) > 1 and sensor != prior:
+                    raise EditorError(f"Sensor {sensor['name']}: Nur ein Bereich pro Sensor ist erlaubt.")
+                if sensor.get("entities") and not links and (
+                    not prior or any(link["area"] in area_keys for link in prior_links)
+                ):
+                    raise EditorError(f"Sensor {sensor['name']}: Bitte einen Bereich auswählen.")
         introduced = mode_conflicts(new) - mode_conflicts(current)
         if introduced:
             entity, attribute, mode, area_a, area_b = sorted(introduced)[0]

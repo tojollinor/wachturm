@@ -1,4 +1,4 @@
-/** Wachturm 0.8.1: local admin panel; no outside JS dependencies.
+/** Wachturm 0.8.2: local admin panel; no outside JS dependencies.
  * All values originating from HA/configuration are HTML escaped before render.
  * Only administrators may call the server's mutation WebSocket endpoints.
  */
@@ -10,7 +10,7 @@ const slug = (value) => String(value || "").trim().toLowerCase().replace(/[^a-z0
 const split = (value) => String(value || "").split(",").map((x) => x.trim()).filter(Boolean);
 const SECTIONS = [
   ["overview", "Übersicht"], ["areas", "Bereiche"], ["modes", "Modi"],
-  ["zones", "Sensoren"], ["actions", "Aktionen"], ["diagnostics", "Diagnose"], ["users", "Benutzer"],
+  ["actions", "Aktionen"], ["diagnostics", "Diagnose"], ["users", "Benutzer"],
   ["roles", "Rollen"], ["bindings", "Bediengeräte"], ["audit", "Bedienhistorie"],
 ];
 const SENSOR_PROFILES={
@@ -339,6 +339,7 @@ class HaAlarmzentralePanel extends HTMLElement {
     @media(max-width:760px){.area-stack .status-panel{align-items:flex-start;flex-direction:column}.area-controls{flex-wrap:wrap;justify-content:flex-start}.sensor-mode-settings{grid-template-columns:1fr}.modal .rule-table thead{display:none}.modal .rule-table tr{display:flex;flex-direction:column;padding:10px 0;border-bottom:1px solid var(--divider-color)}.modal .rule-table td{border:0;width:100%;box-sizing:border-box}.modal .rule-table select{width:100%;min-width:0}}
     @media(max-width:600px){.wrap{padding:12px}.card{padding:16px}.top h1{font-size:23px}.tab{padding:7px 10px}.modal-content{padding:16px}.rule-table td,.rule-table th{padding:8px 4px}.page-grid{grid-template-columns:minmax(0,1fr)}.list-item{align-items:flex-start;flex-direction:column}.list-item .actions{width:100%}.hero h2{font-size:18px}}
   .sabotage-sensor-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:16px}.sabotage-sensor-content{min-width:0}.sabotage-sensor-content .item-title{display:flex;align-items:center;gap:8px;overflow-wrap:anywhere}.sabotage-sensor-content .item-title ha-icon{flex-shrink:0}.sabotage-sensor-content .entity-statuses{margin-top:10px}.sabotage-sensor-content .entity-status{max-width:100%;box-sizing:border-box;flex-wrap:wrap}.list-item.action-card:last-child{border:1px solid var(--divider-color);padding-bottom:12px}.readiness-indicators{float:right;display:inline-flex;gap:12px;align-items:center;margin-left:12px}.readiness-indicators span{display:inline-flex;align-items:center;gap:4px}.readiness-indicators ha-icon{--mdc-icon-size:20px}details[open]>summary .readiness-indicators{display:none}.diagnostic-alarm-launch{border:1px solid var(--divider-color);border-radius:12px;padding:16px;margin-top:20px}.action-test-panel{border:1px solid var(--divider-color);border-radius:12px;padding:14px;margin-top:16px}.action-test-panel .actions{margin-top:12px}.action-test-panel [role=status]{margin-top:10px}@media(max-width:440px){.sabotage-sensor-row{grid-template-columns:minmax(0,1fr)}.sabotage-sensor-row>.toggle{justify-self:end}}
+  .area-sensor-group>summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.area-sensor-group>summary:before{content:"▸"}.area-sensor-group[open]>summary:before{content:"▾"}.area-sensor-group>summary ha-icon{flex-shrink:0;--mdc-icon-size:24px}.area-sensor-group>summary .sub{margin-left:auto}.area-sensor-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.area-sensor-toolbar .primary{margin-left:auto}.area-sensor-group .sensor-card{border:1px solid var(--divider-color);border-radius:12px;margin:10px 0}.area-sensor-group .sensor-card:last-child{border:1px solid var(--divider-color)}
   .form-grid.area-advanced-settings{align-items:start}.area-advanced-settings>.duration{padding:0;display:flex;flex-direction:column;gap:5px}
   .top .project-link{color:var(--primary-color,#03a9f4);text-decoration:none}.top .project-link:hover{text-decoration:underline}.top .project-link:focus-visible{outline:2px solid var(--primary-color);outline-offset:3px}
   .top .brand-logo{object-fit:contain;width:48px;height:52px;flex:0 0 48px;user-select:none}.brand-logo{object-fit:contain}@media(max-width:760px){.top .brand-logo{display:block;width:28px;height:32px;flex:0 0 28px}}
@@ -365,7 +366,7 @@ class HaAlarmzentralePanel extends HTMLElement {
     const dirty = "Änderungen werden im jeweiligen Dialog gespeichert";
     const locked = !this._safe;
     this.shadowRoot.innerHTML = this._css() + `<div class="wrap">
-      <header class="top"><div><div class="row flex-start"><button class="btn mobile-menu" aria-label="Seitenleiste öffnen"><ha-icon icon="mdi:menu"></ha-icon></button><img class="header-mode brand-logo" src="/ha_alarmzentrale_assets/wachturm-logo.png?v=0.8.1" alt="" aria-hidden="true" draggable="false"><div><h1>Wachturm</h1><div class="sub">${this._canAdmin?'Bedienung und Verwaltung':'Bedienung'} · <a class="project-link" href="https://github.com/tojollinor/wachturm" target="_blank" rel="noopener noreferrer" aria-label="Wachturm auf GitHub öffnen">v0.8.1 · GitHub</a></div></div></div></div>
+      <header class="top"><div><div class="row flex-start"><button class="btn mobile-menu" aria-label="Seitenleiste öffnen"><ha-icon icon="mdi:menu"></ha-icon></button><img class="header-mode brand-logo" src="/ha_alarmzentrale_assets/wachturm-logo.png?v=0.8.2" alt="" aria-hidden="true" draggable="false"><div><h1>Wachturm</h1><div class="sub">${this._canAdmin?'Bedienung und Verwaltung':'Bedienung'} · <a class="project-link" href="https://github.com/tojollinor/wachturm" target="_blank" rel="noopener noreferrer" aria-label="Wachturm auf GitHub öffnen">v0.8.2 · GitHub</a></div></div></div></div>
       <div class="message-slot" aria-live="polite"><div class="header-message-stack">${this._error?`<div class="notice error" role="alert">${E(this._error)}</div>`:""}
       ${this._notice?`<div id="success-notice" class="notice" role="status"><ha-icon icon="mdi:check-circle-outline"></ha-icon> ${E(this._notice)}</div>`:""}
       ${this._doc&&this._canAdmin?`<div id="configuration-lock" class="notice warning" ${locked?'':'hidden'}><ha-icon icon="mdi:lock-outline"></ha-icon>${this._runtime?.test_session?.active?'Sensortest aktiv: Alarmaktionen und Bedienung sind gesperrt.':'Änderungen gesperrt: Anlage deaktivieren und Alarme quittieren.'}</div>`:""}
@@ -379,7 +380,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
   }
 
   async _mountAlarmCard(){
-    if(!customElements.get('ha-alarmzentrale-card'))await import('./alarmzentrale-card.js?v=0.8.1');
+    if(!customElements.get('ha-alarmzentrale-card'))await import('./alarmzentrale-card.js?v=0.8.2');
     const host=this.shadowRoot.getElementById('fullscreen-alarm');if(!host||host.firstChild)return;
     const entity=Object.keys(this._hass.states||{}).find(id=>this._hass.states[id].attributes?.alarmzentrale_panel===true&&this._hass.states[id].attributes.integration==='ha_alarmzentrale');
     if(!entity){host.textContent='Zentrales Alarm-Panel noch nicht verfügbar.';return;}
@@ -611,6 +612,15 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     const op=button.dataset.action, idx=Number(button.dataset.index);
     if(this._busy)return;
     if(!this._canAdmin&&['add','edit','delete','pin','upgrade','membership','diag-apply'].includes(op))return;
+    if(['sensor-add','sensor-edit','sensor-delete'].includes(op)){
+      if(!this._canAdmin||!this._safe)return;
+      const area=button.dataset.area;
+      if(op==='sensor-add'){
+        if(!this._doc.areas.some(a=>a.key===area&&a.key!==SABOTAGE_AREA))return;
+        this._dialog={kind:'zones',index:null,area,item:this._default('zones')};
+      }else{const sensor=this._doc.sensors[idx];if(!sensor)return;this._dialog={kind:op==='sensor-delete'?'delete':'zones',originalKind:'zones',index:idx,item:clone(sensor)};}
+      this._render();return;
+    }
     if(op==='audit-refresh'){void this._refreshAudit();return;}
     if(op==='diag-apply'){this._applyDiagnostics();return;}
     if(op==='upgrade'){void this._upgrade();return;}
@@ -1066,8 +1076,20 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     }).join('');
   }
 
+  _areaSensorRow(sensor, areaKey) {
+    const index=this._doc.sensors.indexOf(sensor),multiple=(sensor.memberships||[]).length>1;
+    return `<div class="list-item sensor-card" data-sensor-key="${E(sensor.key)}"><div class="sensor-main-row"><div class="sensor-title"><ha-icon icon="${E(this._sensorIcon(sensor))}"></ha-icon><strong>${E(sensor.name)}</strong></div><div class="entity-statuses" data-sensor-status="${E(sensor.key)}">${this._sensorStatusMarkup(sensor)}</div><div class="actions"><button class="btn small" data-action="sensor-edit" data-index="${index}" ${!this._safe?'disabled':''}>Bearbeiten</button><button class="btn small danger" data-action="sensor-delete" data-index="${index}" ${!this._safe?'disabled':''}>Löschen</button></div></div>${multiple?'<p class="tone-warning">Bisher mehreren Bereichen zugeordnet. Beim Bearbeiten genau einen Bereich auswählen.</p>':''}${areaKey&&areaKey!==SABOTAGE_AREA?`<details class="sensor-links" data-detail-key="sensor-${E(areaKey)}-${E(sensor.key)}"><summary>Modusregeln</summary><button class="btn small" data-action="membership" data-area="${E(areaKey)}" data-index="${index}" ${!this._safe?'disabled':''}>Entitäten und Regeln bearbeiten</button>${this._sensorModeSummary(sensor)}</details>`:''}</div>`;
+  }
+  _sectionAreaSensors() {
+    const areas=[...this._doc.areas].sort((a,b)=>Number(b.key===SABOTAGE_AREA)-Number(a.key===SABOTAGE_AREA));
+    const unassigned=this._doc.sensors.filter(sensor=>!(sensor.memberships||[]).length);
+    return `<div class="card"><div class="row"><h2>Bereiche und Sensoren</h2><button class="btn primary" data-action="add" ${!this._safe?'disabled':''}>+ Bereich hinzufügen</button></div>${this._sectionSearch()}
+      ${areas.map(area=>{const fixed=area.key===SABOTAGE_AREA,index=this._doc.areas.indexOf(area),sensors=this._doc.sensors.filter(sensor=>fixed?Boolean(sensor.sabotage):(sensor.memberships||[]).some(link=>link.area===area.key));return `<details class="sensor-advanced area-sensor-group" data-area-key="${E(area.key)}" data-detail-key="area-sensors-${E(area.key)}" data-search="${E(area.name+' '+sensors.map(s=>s.name+' '+s.entities?.map(e=>e.entity_id).join(' ')).join(' '))}"><summary><ha-icon icon="${E(this._areaIcon(area))}"></ha-icon><strong>${E(area.name)}</strong><span class="sub">${sensors.length} Sensoren · ${this._modesForArea(area.key).length} Modi</span></summary><div class="area-sensor-toolbar"><button class="btn small" data-action="edit" data-index="${index}" ${!this._safe?'disabled':''}>${fixed?'Überwachung einstellen':'Bereich bearbeiten'}</button>${fixed?'':`<button class="btn small danger" data-action="delete" data-index="${index}" ${!this._safe?'disabled':''}>Bereich löschen</button><button class="btn primary small" data-action="sensor-add" data-area="${E(area.key)}" ${!this._safe?'disabled':''}>+ Sensor hinzufügen</button>`}</div>${sensors.map(sensor=>this._areaSensorRow(sensor,area.key)).join('')||'<p class="sub">Noch keine Sensoren vorhanden.</p>'}</details>`;}).join('')}
+      ${unassigned.length?`<details class="sensor-advanced area-sensor-group" data-detail-key="unassigned-sensors" data-search="${E(unassigned.map(s=>s.name).join(' '))}"><summary><ha-icon icon="mdi:folder-alert-outline"></ha-icon><strong>Ohne Bereich</strong><span class="sub">${unassigned.length} Sensoren</span></summary><p class="sub">Diese vorhandenen Sensoren bleiben erhalten. Über Bearbeiten einem Bereich zuordnen.</p>${unassigned.map(sensor=>this._areaSensorRow(sensor,null)).join('')}</details>`:''}</div>`;
+  }
   _sectionV2() {
     const key=this._active, area=this._doc.areas.find(a=>a.key===this._area);
+    if(key==='areas'||key==='zones')return this._sectionAreaSensors();
     if(key==='diagnostics')return this._sectionDiagnostics();
     if(key==='overview')return `<div class="card" id="runtime-overview">${this._overviewContent()}</div>`;
     if(!['areas','modes','zones','actions'].includes(key))return this._sectionSharedModern();
@@ -1209,30 +1231,21 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
 
   _v2AreaDialog() {
     const d=this._dialog,item=d.item,fixed=item.key===SABOTAGE_AREA;
-    const sensors=this._doc.sensors.filter(s=>fixed?Boolean(s.sabotage):(s.entities||[]).length);
+    const sensors=this._doc.sensors.filter(s=>fixed?Boolean(s.sabotage):(s.memberships||[]).some(m=>m.area===item.key));
     return this._v2Modal(fixed?'Sabotagebereich':'Alarmbereich bearbeiten',`
       ${this._v2KeyField(d)}${fixed?'<h3>Sabotage</h3><p class="sub">Sabotagekontakte werden automatisch aus den Sensoren übernommen.</p>':this._input('name','Bereichsname',item.name)}<div data-native-icon="icon" data-source-label="Bereichssymbol">${this._input('icon','Bereichssymbol',this._areaIcon(item))}</div>
       <h3>Zugeordnete Sensoren</h3>
       ${sensors.map(sensor=>{
         const index=this._doc.sensors.indexOf(sensor),link=sensor.memberships?.find(m=>m.area===item.key);
         if(fixed)return `<div class="list-item sabotage-sensor-row"><div class="sabotage-sensor-content"><div class="item-title"><ha-icon icon="mdi:shield-check"></ha-icon><strong>${E(sensor.name)}</strong></div><div class="entity-statuses" data-sensor-status="${E(sensor.key)}">${this._sensorStatusMarkup(sensor)}</div></div>${this._switch('area-sabotage-'+index,'Überwachen',sensor.sabotage.enabled!==false)}</div>`;
-        return `<div class="list-item"><div>${this._switch('area-sensor-'+index,sensor.name,Boolean(link))}<div class="entity-statuses" data-sensor-status="${E(sensor.key)}">${this._sensorStatusMarkup(sensor)}</div><div class="checkbox-wrap">${(sensor.entities.length>1?sensor.entities:[]).map((ent,i)=>this._checkbox(`area-entity-${index}-${i}`,ent.name||this._entityLabel(ent.entity_id),link?(link.entity_keys||sensor.entities.map(e=>e.key)).includes(ent.key):true)).join('')}</div></div></div>`;
-      }).join('')||'<div class="empty-state">Zuerst einen Sensor mit einer überwachten Entität anlegen.</div>'}
+        return `<div class="list-item"><div class="item-title"><ha-icon icon="${E(this._sensorIcon(sensor))}"></ha-icon><strong>${E(sensor.name)}</strong></div><div class="entity-statuses" data-sensor-status="${E(sensor.key)}">${this._sensorStatusMarkup(sensor)}</div></div>`;
+      }).join('')||'<div class="empty-state">Sensoren nach dem Speichern direkt im Bereich hinzufügen.</div>'}
       <details class="sensor-advanced"><summary>Weitere Einstellungen</summary><div class="form-grid area-advanced-settings">${this._select('ack_policy','Alarm quittieren',item.ack_policy||'manual',[['manual','Manuell'],['auto_clear','Nach Normalisierung automatisch']])}${this._input('recovery_fault_grace_seconds','Schutzzeit nach Neustart (s)',item.recovery_fault_grace_seconds??30,'number')}</div></details>
       <p class="sub">Neue Bereiche benötigen zusätzlich die passenden Benutzer- oder Rollenrechte.</p><p class="sub">Welche Bereiche aktiv sind und ob Kontakte sofort oder nach Standby auslösen, wird im jeweiligen Modus eingestellt.</p>`);
   }
   _applyAreaMembers(candidate,area) {
     if(area.key===SABOTAGE_AREA){candidate.sensors.forEach((sensor,index)=>{if(sensor.sabotage)sensor.sabotage.enabled=this._checked('area-sabotage-'+index);});return;}
-    candidate.sensors.forEach((sensor,index)=>{
-      const prior=sensor.memberships?.find(m=>m.area===area.key);
-      sensor.memberships=(sensor.memberships||[]).filter(m=>m.area!==area.key);
-      if(!this._checked('area-sensor-'+index))return;
-      const selected=(sensor.entities||[]).filter((e,i)=>sensor.entities.length===1||this._checked(`area-entity-${index}-${i}`)).map(e=>e.key);
-      if(!selected.length)throw Error(`${sensor.name}: Mindestens eine Entität für diesen Bereich auswählen.`);
-      const link={...(prior||{initial_policy:'block',fault_policy:'block'}),area:area.key,entity_keys:selected};
-      if(link.entity_rules)link.entity_rules=Object.fromEntries(Object.entries(link.entity_rules).filter(([key])=>selected.includes(key)));
-      sensor.memberships.push(link);
-    });
+    // Regular sensors are created or moved in their own area-scoped dialog.
   }
   _v2ModeDialog() {
     const d=this._dialog,item=d.item;
@@ -1294,7 +1307,8 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     const devices=[...this._catalog.devices].sort((a,b)=>this._deviceLabel(a).localeCompare(this._deviceLabel(b),'de'));
     const deviceOptions=[['','Ohne Gerät / nur Entitäten'],...devices.map(x=>[x.id,this._deviceLabel(x)])];
     if(item.device_id && !devices.some(d=>d.id===item.device_id))deviceOptions.push([item.device_id,'Bisheriges Gerät (nicht im Register)']);
-    const members=this._doc.areas.filter(a=>a.key!==SABOTAGE_AREA).map(a=>this._checkbox(`member-area-${a.key}`,a.name,(item.memberships||[]).some(m=>m.area===a.key))).join('');
+    const assigned=d.area??((item.memberships||[]).length===1?item.memberships[0].area:'');
+    const members=this._select('sensor-area','Bereich',assigned,[['','Bereich wählen'],...this._doc.areas.filter(a=>a.key!==SABOTAGE_AREA).map(a=>[a.key,a.name])]);
     const sources=(fields)=>'<div class="form-grid">'+fields.map(([key,label])=>`<div data-diagnostic-picker="${E(key)}" data-picker-label="${E(label)}">${this._input('diagnostic-'+key,label,(key==='sabotage'?item.sabotage?.entity_id:(item.diagnostic_entities||{})[key])||'','text')}</div>`).join('')+'</div>';
     const values=(fields)=>'<div class="form-grid">'+fields.map(([key,label])=>this._input('diagvalue-'+key,label,(item.diagnostic_values||{})[key]?.join(', ')??'','text')).join('')+'</div>';
     return this._v2Modal('Sensor bearbeiten',`<div class="form-grid sensor-header">${this._input('name','Sensorname',item.name)}${this._select('sensor_type','Sensortyp',item.sensor_type||'auto',SENSOR_TYPES)}<div id="sensor-device-picker">${this._select('device_id','Home-Assistant-Gerät',item.device_id||'',deviceOptions)}</div></div>
@@ -1325,7 +1339,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
         </div></div>
       </details>
       <datalist id="diagnostic-entity-list">${this._entityCandidates().map(id=>`<option value="${E(id)}"></option>`).join('')}</datalist>
-      ${this._group('Mitglied von Alarmbereichen',`${members}<div class="sub">Die konkreten Entitäten und Regeln je Bereich anschließend über „Regeln bearbeiten“ in der Sensorliste festlegen.</div>`)}`);
+      ${this._group('Bereichszuordnung',`${members}${(item.memberships||[]).length>1?'<p class="tone-warning">Der Sensor hat bisher mehrere Bereiche. Mit dem Speichern wird nur der gewählte Bereich beibehalten.</p>':''}<p class="sub">Ein Sensor gehört zu einem Bereich. Beim Verschieben gelten zunächst die Standardregeln des Zielbereichs; das Verhalten je Modus wird in den Modi eingestellt.</p>`)}`);
   }
 
   _sensorChoices() {
@@ -1730,6 +1744,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     const d=this._dialog;if(d?.kind!=='zones')return;
     d.item.name=this._val('name')||d.item.name;
     d.item.device_id=this._val('device_id')||null;
+    if(this._field('sensor-area'))d.area=this._val('sensor-area');
     const search=this._field('entity-search');if(search)d.search=search.value;
     const show=this._field('entity-show-all');if(show)d.showAll=show.checked;
     for(const el of this.shadowRoot.querySelectorAll('[data-entity-editor]')){
@@ -1796,6 +1811,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
     if(this._dialog?.kind==='zones'){
       this._refreshSensorSymbolPreview();
       this._field('sensor_type')?.addEventListener('change',()=>this._refreshSensorSymbolPreview());
+      this._field('sensor-area')?.addEventListener('change',()=>{this._dialog.area=this._val('sensor-area');});
       for(const source of ['battery','connectivity','sabotage']){
         this._refreshSourceStates(source);
         this._field('diagnostic-'+source)?.addEventListener('input',()=>this._refreshSourceStates(source,true));
@@ -1927,17 +1943,12 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
         return {key,entity_id:id,...(e.name?{name:e.name}:{}),...(e.attribute?{attribute:e.attribute}:{}),active_states,normal_states};
       });
       const keys=new Set(item.entities.map(e=>e.key));
-      if(!keys.size&&this._doc.areas.some(a=>a.key!==SABOTAGE_AREA&&this._checked(`member-area-${a.key}`)))throw Error('Bereichszuordnungen benötigen überwachte Entitäten.');
-      item.memberships=(item.memberships||[]).filter(m=>m.area!==SABOTAGE_AREA&&this._doc.areas.some(a=>a.key===m.area)&&this._checked(`member-area-${m.area}`)).map(m=>{
-        const selected=(m.entity_keys||[]).filter(k=>keys.has(k));
-        const entity_rules=Object.fromEntries(Object.entries(m.entity_rules||{}).filter(([k])=>keys.has(k)));
-        return {...m,entity_keys:selected.length?selected:item.entities.map(ent=>ent.key),entity_rules};
-      });
-      for(const area of this._doc.areas.filter(a=>a.key!==SABOTAGE_AREA)){
-        if(this._checked(`member-area-${area.key}`)&&!item.memberships.some(m=>m.area===area.key)){
-          item.memberships.push({area:area.key,entity_keys:item.entities.map(ent=>ent.key),initial_policy:'block',fault_policy:'block'});
-        }
-      }
+      const areaKey=this._val('sensor-area');
+      if(keys.size&&!this._doc.areas.some(a=>a.key===areaKey&&a.key!==SABOTAGE_AREA))throw Error('Bitte genau einen Bereich für den Sensor auswählen.');
+      const prior=(item.memberships||[]).find(m=>m.area===areaKey);
+      item.memberships=keys.size?[{...(prior||{initial_policy:'block',fault_policy:'block'}),area:areaKey,
+        entity_keys:prior?.entity_keys?.filter(k=>keys.has(k)).length?prior.entity_keys.filter(k=>keys.has(k)):item.entities.map(ent=>ent.key),
+        ...(prior?.entity_rules?{entity_rules:Object.fromEntries(Object.entries(prior.entity_rules).filter(([key])=>keys.has(key)))}:{})}]:[];
     }
     if(kind==='actions'){
       item.domain=this._val('domain');item.service=this._val('service');
