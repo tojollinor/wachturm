@@ -271,6 +271,8 @@ def run():
         assert action["when"] == "battery" and action["domain"] == "notify" and action["timing"] == "after"
         # A role template writes explicit permissions; a HA user can be activated.
         root.get_by_role("button", name="Rollen", exact=True).click()
+        assert root.get_by_text("Admin", exact=True).is_visible()
+        assert root.get_by_text("Standardrolle · Alle Bedienrechte", exact=True).is_visible()
         root.locator('[data-action="add"]').click()
         root.locator('[data-field="role-preset"]').select_option("guest")
         root.locator('[data-field="name"]').fill("Besucher")

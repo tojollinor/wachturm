@@ -173,14 +173,17 @@ def default_config_json() -> str:
             {"key":"night","name":"Nacht","area_keys":[],"standby_seconds":0},
         ],
     })
-    return json.dumps(raw,indent=2,ensure_ascii=False)
+    from .default_roles import with_admin_role
+    return json.dumps(with_admin_role(raw),indent=2,ensure_ascii=False)
 
 # Identity and input event configuration is separate from zones.
 # Parsing all parts together prevents installing a partial, unsafe policy.
 def parse_security(raw: Any):
     from .security import AlarmUser, EventBinding, Grant, Role, SecuritySpec, Window
 
-    root = _obj(raw, "root")
+    from .default_roles import with_admin_role
+    from .sabotage import with_sabotage_area
+    root = with_admin_role(with_sabotage_area(_obj(raw, "root")))
 
     def grants(items, label):
         return tuple(Grant(
@@ -235,6 +238,8 @@ def parse_security(raw: Any):
 
 
 def parse_configuration(raw: Any):
+    from .sabotage import with_sabotage_area
+    raw = with_sabotage_area(raw)
     from .diagnostic_adapter import parse_diagnostics
     parse_diagnostics(raw)
     from .diagnostic_policy import validate_diagnostic_reactions

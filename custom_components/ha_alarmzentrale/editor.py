@@ -11,6 +11,7 @@ import json
 
 from .configuration import parse_configuration, parse_configuration_json, parse_specs
 from .security import make_pin_hash
+from .default_roles import with_admin_role
 from .sabotage import SABOTAGE_AREA, with_sabotage_area
 
 MAX_CONFIG_BYTES = 256 * 1024
@@ -66,7 +67,7 @@ def describe_changes(current_raw: str, proposed_raw: str) -> str:
 
 def visible_document(raw: str) -> dict:
     """Expose editable configuration but no local panel credential verifier."""
-    config = with_sabotage_area(json.loads(raw))
+    config = with_admin_role(with_sabotage_area(json.loads(raw)))
     pin_users = []
     for user in config.get("users", []):
         if user.pop("panel_pin_hash", None):
@@ -91,7 +92,7 @@ def prepare_configuration(current_raw: str, candidate: dict, expected_revision: 
     if current.get("schema") == 2 and any(a.get("key") == SABOTAGE_AREA for a in current.get("areas", [])):
         if not any(isinstance(a, dict) and a.get("key") == SABOTAGE_AREA for a in new.get("areas", [])):
             raise EditorError("Der feste Sabotagebereich kann nicht gelöscht werden")
-    new = with_sabotage_area(new)
+    new = with_admin_role(with_sabotage_area(new))
     known = {u["key"]: u.get("panel_pin_hash") for u in current.get("users", [])}
     if not isinstance(new.get("users", []), list):
         raise EditorError("Benutzerliste ist ungültig")

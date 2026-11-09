@@ -178,7 +178,7 @@ class SabotageTests(unittest.TestCase):
         raw = fixture()
         serialized = json.dumps(raw)
         revision = editor.revision_of(serialized)
-        self.assertEqual(json.loads(editor.prepare_configuration(serialized, raw, revision)), raw)
+        self.assertEqual(json.loads(editor.prepare_configuration(serialized, raw, revision)), importlib.import_module("alarm_core_tests.default_roles").with_admin_role(raw))
         renamed = deepcopy(raw)
         renamed["areas"][-1]["name"] = "Andere"
         with self.assertRaises(ValueError):

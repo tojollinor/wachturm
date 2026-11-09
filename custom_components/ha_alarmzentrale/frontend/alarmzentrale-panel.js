@@ -1,4 +1,4 @@
-/** Wachturm 0.8.3: local admin panel; no outside JS dependencies.
+/** Wachturm 0.8.4: local admin panel; no outside JS dependencies.
  * All values originating from HA/configuration are HTML escaped before render.
  * Only administrators may call the server's mutation WebSocket endpoints.
  */
@@ -256,7 +256,7 @@ class HaAlarmzentralePanel extends HTMLElement {
     finally{pin='';this._busy=false;this._render();}
   }
   _sectionSearch(label='Suchen') {return `<label class="field section-search">${E(label)}<input type="search" id="section-search" placeholder="Name, Gerät oder Bereich"></label>`;}
-  _itemButtons(index,kind=this._active) {return `<div class="actions"><button class="btn small" data-action="edit" data-index="${index}" ${!this._safe?'disabled':''}>Bearbeiten</button><button class="btn small danger" data-action="delete" data-index="${index}" ${!this._safe?'disabled':''}>Löschen</button>${kind==='users'?`<button class="btn small" data-action="pin" data-index="${index}" ${!this._safe?'disabled':''}>${this._pinUsers.includes(this._doc.users[index]?.key)?'PIN verwalten':'PIN einrichten'}</button><button class="btn small" data-action="user-activity" data-index="${index}">Aktivität</button>`:''}</div>`;}
+  _itemButtons(index,kind=this._active) {if(kind==='roles'&&this._doc.roles?.[index]?.builtin==='admin')return '<span class="pill">Standardrolle · Alle Bedienrechte</span>';return `<div class="actions"><button class="btn small" data-action="edit" data-index="${index}" ${!this._safe?'disabled':''}>Bearbeiten</button><button class="btn small danger" data-action="delete" data-index="${index}" ${!this._safe?'disabled':''}>Löschen</button>${kind==='users'?`<button class="btn small" data-action="pin" data-index="${index}" ${!this._safe?'disabled':''}>${this._pinUsers.includes(this._doc.users[index]?.key)?'PIN verwalten':'PIN einrichten'}</button><button class="btn small" data-action="user-activity" data-index="${index}">Aktivität</button>`:''}</div>`;}
   _sectionUsers() {
     const configured=this._doc.users||[],accounts=this._haUsers.filter(u=>!u.system_generated);
     const rows=accounts.map(account=>{
@@ -366,7 +366,7 @@ class HaAlarmzentralePanel extends HTMLElement {
     const dirty = "Änderungen werden im jeweiligen Dialog gespeichert";
     const locked = !this._safe;
     this.shadowRoot.innerHTML = this._css() + `<div class="wrap">
-      <header class="top"><div><div class="row flex-start"><button class="btn mobile-menu" aria-label="Seitenleiste öffnen"><ha-icon icon="mdi:menu"></ha-icon></button><img class="header-mode brand-logo" src="/ha_alarmzentrale_assets/wachturm-logo.png?v=0.8.3" alt="" aria-hidden="true" draggable="false"><div><h1>Wachturm</h1><div class="sub">${this._canAdmin?'Bedienung und Verwaltung':'Bedienung'} · <a class="project-link" href="https://github.com/tojollinor/wachturm" target="_blank" rel="noopener noreferrer" aria-label="Wachturm auf GitHub öffnen">v0.8.3 · GitHub</a></div></div></div></div>
+      <header class="top"><div><div class="row flex-start"><button class="btn mobile-menu" aria-label="Seitenleiste öffnen"><ha-icon icon="mdi:menu"></ha-icon></button><img class="header-mode brand-logo" src="/ha_alarmzentrale_assets/wachturm-logo.png?v=0.8.4" alt="" aria-hidden="true" draggable="false"><div><h1>Wachturm</h1><div class="sub">${this._canAdmin?'Bedienung und Verwaltung':'Bedienung'} · <a class="project-link" href="https://github.com/tojollinor/wachturm" target="_blank" rel="noopener noreferrer" aria-label="Wachturm auf GitHub öffnen">v0.8.4 · GitHub</a></div></div></div></div>
       <div class="message-slot" aria-live="polite"><div class="header-message-stack">${this._error?`<div class="notice error" role="alert">${E(this._error)}</div>`:""}
       ${this._notice?`<div id="success-notice" class="notice" role="status"><ha-icon icon="mdi:check-circle-outline"></ha-icon> ${E(this._notice)}</div>`:""}
       ${this._doc&&this._canAdmin?`<div id="configuration-lock" class="notice warning" ${locked?'':'hidden'}><ha-icon icon="mdi:lock-outline"></ha-icon>${this._runtime?.test_session?.active?'Sensortest aktiv: Alarmaktionen und Bedienung sind gesperrt.':'Änderungen gesperrt: Anlage deaktivieren und Alarme quittieren.'}</div>`:""}
@@ -380,7 +380,7 @@ ${this._doc && this._doc.schema!==2 ? `<div class="notice"><div class="row"><spa
   }
 
   async _mountAlarmCard(){
-    if(!customElements.get('ha-alarmzentrale-card'))await import('./alarmzentrale-card.js?v=0.8.3');
+    if(!customElements.get('ha-alarmzentrale-card'))await import('./alarmzentrale-card.js?v=0.8.4');
     const host=this.shadowRoot.getElementById('fullscreen-alarm');if(!host||host.firstChild)return;
     const entity=Object.keys(this._hass.states||{}).find(id=>this._hass.states[id].attributes?.alarmzentrale_panel===true&&this._hass.states[id].attributes.integration==='ha_alarmzentrale');
     if(!entity){host.textContent='Zentrales Alarm-Panel noch nicht verfügbar.';return;}

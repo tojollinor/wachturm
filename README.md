@@ -112,7 +112,7 @@ type: custom:ha-alarmzentrale-card
 entity: alarm_control_panel.wachturm
 ```
 
-Ersetze die Beispiel-Entität durch dein tatsächlich vorhandenes zentrales Panel. Wenn die automatische Bereitstellung in deinem Dashboard nicht greift, ergänze `/ha_alarmzentrale_assets/alarmzentrale-card.js?v=0.8.3` als JavaScript-Modul unter den Dashboard-Ressourcen.
+Ersetze die Beispiel-Entität durch dein tatsächlich vorhandenes zentrales Panel. Wenn die automatische Bereitstellung in deinem Dashboard nicht greift, ergänze `/ha_alarmzentrale_assets/alarmzentrale-card.js?v=0.8.4` als JavaScript-Modul unter den Dashboard-Ressourcen.
 
 Bei konfiguriertem PIN-Schutz öffnet sich das integrierte PIN-Pad. Blockierte Modi sind nicht aktivierbar. Im Alarmfall pulsieren Symbol und Kartenrahmen; Stummschalten lässt Auslöser und Alarmdauer sichtbar.
 
@@ -150,7 +150,13 @@ Wachturm kann Öffnungskontakte, Sabotage, `LOW_BAT`, Spannung, Erreichbarkeit u
 
 Für binäre Diagnosewerte wird die Bedeutung ausdrücklich zugeordnet. Unbekannte oder nicht verfügbare Werte werden entsprechend angezeigt. Eine Erreichbarkeitsprüfung kann die Verfügbarkeit einer Referenzentität oder einen RSSI-Schwellwert verwenden.
 
+## Updates
+
+Entwicklungsbranches sind Arbeitsstände und werden nicht automatisch als normales Update installiert. Veröffentlichte Versionen werden über GitHub-Releases bereitgestellt. Nach einer Veröffentlichung kannst du im Marketplace/HACS die Repository-Informationen aktualisieren und das angebotene Update installieren. Starte Home Assistant anschließend neu.
+
 ## Rechte und Daten
+
+Die Standardrolle **Admin** hat alle Bedienrechte in allen bestehenden und zukünftigen Bereichen, einschließlich Sabotage. Weise sie unter **Benutzer** ausdrücklich den gewünschten Personen zu. Die Rolle aktiviert keine Benutzer und umgeht weder PIN-Schutz noch Kontosperren oder Zeitfenster. Die Konfigurationsverwaltung benötigt weiterhin ein Home-Assistant-Administratorkonto.
 
 Die Verwaltung ist Home-Assistant-Administratoren vorbehalten. Die Bedienung prüft zusätzlich die in Wachturm eingerichteten Benutzer, Rollen und Modusrechte. Ein Home-Assistant-Konto allein ersetzt diese Zuordnung nicht.
 

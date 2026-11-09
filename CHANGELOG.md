@@ -1,5 +1,11 @@
 # Änderungen
 
+## 0.8.4 (noch nicht veröffentlicht)
+
+- Feste Standardrolle Admin mit allen Bedienrechten für bestehende und zukünftige Bereiche einschließlich Sabotage.
+- Admin wird nur ausdrücklich zugewiesen; Konto-, PIN- und Home-Assistant-Administratorschutz bleiben erhalten.
+- Hinweise zur Update-Bereitstellung ergänzt.
+
 ## 0.8.3 (noch nicht veröffentlicht)
 
 - Bereichsauswahl bei Aktionen und Aktionstests entfernt; Zuordnung erfolgt über Modi.
